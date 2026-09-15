@@ -43,7 +43,7 @@ The GUI opened the generated project and played/scrubbed the composed video afte
 
 The updated suite passes 28 tests, including loading older documents without a background field. The Dawn/9% padding fixture passed at both export resolutions: mean sampled pixel errors were below 0.35/255, audio pulse offsets remained approximately 0.1 ms, and cancellation during preparation left no destination file.
 
-The redesigned native window was checked in light and dark appearance. The real filmstrip loaded, playback advanced, and the accessible filmstrip action moved the playhead to one second. Changing Dawn to Tide updated the preview; Undo restored Dawn. Restoring the `[2, 3)` cut changed the output from five to six seconds, and Undo restored five seconds with no unsaved changes. A fresh screenshot using only generated footage appears in the README and project site. The original System appearance preference was restored after review.
+The redesigned native window was checked in light and dark appearance. The real filmstrip loaded, playback advanced, and the accessible filmstrip action moved the playhead to one second. Changing Dawn to Tide updated the preview; Undo restored Dawn and Redo reapplied Tide. The final SDK compatibility build repeated this Undo/Redo check successfully. Restoring the `[2, 3)` cut changed the output from five to six seconds, and Undo restored five seconds with no unsaved changes. A fresh screenshot using only generated footage appears in the README and project site. The original System appearance preference was restored after review.
 
 ## Manual checks still required
 

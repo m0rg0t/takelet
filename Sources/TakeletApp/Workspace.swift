@@ -168,7 +168,10 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     func edit(_ next: Project, name: String) {
         do { try next.validate() } catch { self.error = error.localizedDescription; return }
         guard let previous = project, previous != next else { return }
-        undoManager?.registerUndo(withTarget: self) { target in target.edit(previous, name: name) }
+        undoManager?.registerUndo(withTarget: self) { target in
+            // AppKit invokes this window's undo actions on the main thread. Keep redo registration synchronous.
+            MainActor.assumeIsolated { target.edit(previous, name: name) }
+        }
         undoManager?.setActionName(name)
         project = next; dirty = next != savedProject
         Task { await refreshPreview() }
