@@ -1,0 +1,24 @@
+name: macOS checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  swift:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Toolchain
+        run: swift --version
+      - name: Build and unit tests
+        run: sh scripts/swift-check.sh test
+      - name: Build developer app
+        run: sh scripts/build-app.sh
+      - name: Check public files
+        run: python3 scripts/check-public-files.py
