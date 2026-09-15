@@ -20,5 +20,12 @@ jobs:
         run: sh scripts/swift-check.sh test
       - name: Build developer app
         run: sh scripts/build-app.sh
+      - name: Check release packaging and optimized build
+        env:
+          TAKELET_BUILD_CONFIGURATION: release
+        run: |
+          bash -n scripts/build-dmg.sh
+          plutil -lint Resources/Takelet.entitlements
+          sh scripts/build-app.sh
       - name: Check public files
         run: python3 scripts/check-public-files.py

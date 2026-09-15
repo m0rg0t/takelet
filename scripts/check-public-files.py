@@ -11,7 +11,7 @@ for name in filter(None, paths):
     path = Path(name)
     if any(part in {'.local', 'artifacts', '.build', 'build', 'dist'} for part in path.parts):
         problems.append(f'{name}: local artifact is tracked')
-    if path.suffix.lower() in {'.mov', '.mp4', '.m4a', '.wav', '.sqlite'} or path.name.startswith('.env'):
+    if path.suffix.lower() in {'.mov', '.mp4', '.m4a', '.wav', '.sqlite', '.dmg', '.p12', '.p8'} or path.name.startswith('.env'):
         problems.append(f'{name}: recording, database, or environment file is tracked')
     data = subprocess.check_output(['git', 'show', f':{name}'])
     try:
