@@ -47,6 +47,21 @@ The redesigned native window was checked in light and dark appearance. The real 
 
 ## Manual checks still required
 
+### Downloadable 0.1.0 preview
+
+The optimized arm64 app and DMG were signed with Developer ID, accepted by Apple's
+notary service and stapled. Signature and Gatekeeper checks passed for both the
+distribution image and the app inside the image; disk-image integrity and the
+Applications shortcut also passed. The release source passed all 28 tests and
+the macOS CI build. The SHA-256 and source/toolchain record accompany the release.
+
+A fresh GUI launch check of this signed Release build is pending because the
+development Mac was locked during packaging. The manual editor checks above used
+the development build; they do not replace testing an installed download on a
+different Mac.
+
+### Remaining application coverage
+
 - Importing varied files, save/reopen through Finder and multiple project windows.
 - Browser-window capture with system audio and microphone; permission denial and recovery.
 - Moving/resizing a captured window, cursor alignment and very short clicks.

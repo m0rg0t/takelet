@@ -20,7 +20,7 @@ Suggested GitHub topics: `macos`, `swift`, `swiftui`, `screen-recorder`, `video-
 
 ## Publication status
 
-The source repository is public at <https://github.com/m0rg0t/takelet>. The initial developer preview was published on September 15, 2026. GitHub Pages uses the Actions workflow described in [Project site](SITE.md). A signed, notarized release is not yet available.
+The source repository is public at <https://github.com/m0rg0t/takelet>. The initial developer preview was published on September 15, 2026. Both public websites are described in [Project site](SITE.md). The [0.1.0 developer preview](https://github.com/m0rg0t/takelet/releases/tag/v0.1.0) includes a Developer ID signed, Apple-notarized DMG for Apple Silicon and macOS 15 or later.
 
 ## Publication checks
 
@@ -34,4 +34,4 @@ MIT applies to this repository's code. No proprietary application assets or priv
 
 ## Downloadable release
 
-Finish native capture/playback, recovery/cancellation and permission checks. Choose supported toolchain and Codex versions, then build, sign and notarize using the maintainer's distribution identity. Document installation, privacy behavior, limitations and reproducible release steps. The current ad-hoc developer bundle is not a notarized public release.
+Follow [Releasing](RELEASING.md) to build, sign, notarize, staple and verify the app and DMG, generate a checksum, and publish the exact source revision. The DMG remains a prerelease while native capture, recovery/cancellation, permissions and long-recording reliability receive broader testing. The default local development build remains ad-hoc signed.

@@ -68,8 +68,10 @@ publish-on-push option is for private sites, so it is not used for this public c
 ## Content and images
 
 The landing page distinguishes implemented features, experiments and the roadmap.
-Keep those claims aligned with the README. The main action builds from source;
-replace it with a download only after a signed, notarized release exists.
+Keep those claims aligned with the README. The main action downloads the signed,
+notarized Apple Silicon DMG from its versioned GitHub release URL. Update that
+link only after verifying the new release asset is public and its checksum
+matches. Keep source-build instructions and the developer-preview status visible.
 
 `assets/editor-dark.png` is a real Takelet window using generated media from
 `takelet-media-check`. Refresh it through a native window screenshot when the UI

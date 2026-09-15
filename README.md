@@ -8,7 +8,9 @@ Takelet is a native macOS recorder and editor for short tutorials, feature annou
 
 [Project site](https://m0rg0t.github.io/takelet/) · [ChatGPT Sites](https://takelet.antonlenev.chatgpt.site/) · [Build from source](#build-and-run) · [Roadmap](docs/ROADMAP.md)
 
-The first native editing slice and an experimental Codex analyzer are available from source. There is no signed release download yet. See the [roadmap](docs/ROADMAP.md) for the full first-release scope and remaining work.
+[**Download Takelet 0.1.0 for Apple Silicon**](https://github.com/m0rg0t/takelet/releases/download/v0.1.0/Takelet-0.1.0-arm64.dmg) — a Developer ID signed and Apple-notarized developer preview. Open the DMG, drag Takelet into Applications, then open the app. Requires macOS 15 or later; Intel Macs are not supported.
+
+See the [release notes and checksums](https://github.com/m0rg0t/takelet/releases/tag/v0.1.0) and [roadmap](docs/ROADMAP.md). The experimental Codex analyzer remains available separately from source.
 
 ![Takelet editor showing a synthetic demo, source timeline, cuts and zoom controls](docs/images/editor.png)
 
@@ -39,7 +41,7 @@ sh scripts/build-app.sh
 open build/Takelet.app
 ```
 
-The build script creates an ad-hoc signed **developer** app. Signing and notarization for distribution are still planned. Build caches live in the system temporary directory. The script disables SwiftPM's nested build sandbox; it does not grant macOS screen or microphone permissions.
+By default, the build script creates an ad-hoc signed **developer** app. The downloadable DMG uses the separate [signed and notarized release workflow](docs/RELEASING.md). Build caches live in the system temporary directory. The script disables SwiftPM's nested build sandbox; it does not grant macOS screen or microphone permissions.
 
 To keep build caches on another disk, set `TAKELET_BUILD_CACHE` to an absolute directory before invoking the scripts. Executables then live in `$TAKELET_BUILD_CACHE/build/debug`.
 
