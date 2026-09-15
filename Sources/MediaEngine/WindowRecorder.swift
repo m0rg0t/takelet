@@ -45,7 +45,8 @@ public struct CaptureWindow: Identifiable, @unchecked Sendable {
         configuration.width = max(2, Int(size.width * pixelScale * bound) / 2 * 2)
         configuration.height = max(2, Int(size.height * pixelScale * bound) / 2 * 2)
         configuration.minimumFrameInterval = CMTime(value: 1, timescale: 30)
-        configuration.showsCursor = true
+        // Cursor telemetry is rendered later so styling and zooms remain editable.
+        configuration.showsCursor = false
         configuration.ignoreShadowsSingleWindow = true
         configuration.capturesAudio = systemAudio
         configuration.excludesCurrentProcessAudio = true
@@ -80,6 +81,7 @@ public struct CaptureWindow: Identifiable, @unchecked Sendable {
             isRecording = true
         } catch {
             try? await stream.stopCapture()
+            tracker.stop()
             self.stream = nil; self.recording = nil; self.tracker = nil
             throw error
         }
@@ -88,7 +90,7 @@ public struct CaptureWindow: Identifiable, @unchecked Sendable {
     public func stop() async throws -> [CursorSample] {
         guard let stream else { throw ProjectError("No active recording.") }
         let currentSession = sessionID
-        defer { self.stream = nil; recording = nil; tracker = nil; isRecording = false }
+        defer { tracker?.stop(); self.stream = nil; recording = nil; tracker = nil; isRecording = false }
         try await stream.stopCapture()
         if let recordingError { throw recordingError }
         if !completed {
@@ -144,24 +146,63 @@ private final class CursorTracker: NSObject, SCStreamOutput, @unchecked Sendable
     private let windowID: CGWindowID
     private var bounds: CGRect
     private var firstPTS: CMTime?
+    private var streamClock: CMClock?
+    private var fallbackClockStart: CMTime?
+    private var timer: DispatchSourceTimer?
+    private var finished = false
+    private var visibleContent = false
     private var values: [CursorSample] = []
     init(windowID: CGWindowID, initialBounds: CGRect) { self.windowID = windowID; bounds = initialBounds }
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .screen, sampleBuffer.isValid,
               let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
-              let raw = attachments.first?[.status] as? Int, SCFrameStatus(rawValue: raw) == .complete else { return }
-        let pts = sampleBuffer.presentationTimeStamp
-        if firstPTS == nil { firstPTS = pts }
-        let time = (pts - firstPTS!).seconds
-        guard time.isFinite, time >= 0, values.count < 40_000 else { return }
+              let raw = attachments.first?[.status] as? Int, let status = SCFrameStatus(rawValue: raw), !finished else { return }
+        if status == .blank || status == .suspended || status == .stopped {
+            visibleContent = false
+            if let time = currentTime() { sample(at: time) }
+            return
+        }
+        guard status == .complete || status == .idle else { return }
+        if status == .complete { visibleContent = true }
+        // Both consumers use the same stream clock. SCRecordingOutput doesn't expose its
+        // first encoded PTS, so the first complete screen buffer is our zero-time anchor.
+        guard firstPTS == nil, status == .complete else { return }
+        firstPTS = sampleBuffer.presentationTimeStamp
+        streamClock = stream.synchronizationClock
+        fallbackClockStart = CMClockGetTime(CMClockGetHostTimeClock())
+        sample(at: 0)
+        // A clean static frame need not be delivered again when only the cursor moves.
+        // Poll separately so mouse telemetry continues through SCFrameStatus.idle.
+        let timer = DispatchSource.makeTimerSource(queue: queue)
+        timer.schedule(deadline: .now() + .milliseconds(33), repeating: .nanoseconds(33_333_333), leeway: .milliseconds(2))
+        timer.setEventHandler { [weak self] in
+            guard let self, !finished, let time = currentTime() else { return }
+            sample(at: time)
+        }
+        self.timer = timer; timer.resume()
+    }
+
+    private func currentTime() -> Double? {
+        guard let firstPTS else { return nil }
+        if let streamClock { return (CMClockGetTime(streamClock) - firstPTS).seconds }
+        guard let fallbackClockStart else { return nil }
+        return (CMClockGetTime(CMClockGetHostTimeClock()) - fallbackClockStart).seconds
+    }
+
+    private func sample(at time: Double) {
+        guard time.isFinite, time >= 0, time > (values.last?.time ?? -1), values.count < 40_000 else { return }
         // Quartz window bounds and CGEvent locations share a top-left display coordinate space.
+        let hasWindow: Bool
         if let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, windowID) as? [[String: Any]],
            let rect = info.first?[kCGWindowBounds as String] as? [String: Any],
-           let current = CGRect(dictionaryRepresentation: rect as CFDictionary) { bounds = current }
+           let current = CGRect(dictionaryRepresentation: rect as CFDictionary) { bounds = current; hasWindow = true }
+        else { hasWindow = false }
         guard bounds.width > 0, bounds.height > 0, let location = CGEvent(source: nil)?.location else { return }
         values.append(CursorSample(time: time, x: (location.x - bounds.minX) / bounds.width, y: (location.y - bounds.minY) / bounds.height,
-                                   visible: bounds.contains(location), pressed: CGEventSource.buttonState(.combinedSessionState, button: .left)))
+                                   visible: visibleContent && hasWindow && bounds.contains(location), pressed: CGEventSource.buttonState(.combinedSessionState, button: .left)))
     }
     func samples() -> [CursorSample] { queue.sync { values } }
+    func stop() { queue.sync { finished = true; timer?.cancel(); timer = nil } }
+    deinit { timer?.cancel() }
 }

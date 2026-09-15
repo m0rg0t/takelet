@@ -40,15 +40,21 @@ Exit: benchmark suggestions on representative recordings, measure missed actions
 Implemented in the source build after 0.1.0: multiple independent zoom intervals,
 timeline selection, timing/scale/focus editing, removal and undo/redo. Local Auto
 Zoom creates editable intervals from sampled clicks, preserving existing edits and
-skipping removed footage. Version-1 projects migrate to format 2 on save.
+skipping removed footage. Editable separate cursors now support built-in shapes,
+custom PNGs and click styling. Versions 1/2 migrate to format 3 on save.
 
-Next: display/area capture, independent cursor rendering, dragging/resizing timeline
+Next: display/area capture, dragging/resizing timeline
 intervals, autosave, recovery and richer document handling. Verify Retina/multiple-display
 geometry, live click timing, missing assets and ten-minute playback.
 
 ### M2 — Narration and pacing
 
-Build provider settings, script review, language/audience controls, ElevenLabs segment generation and retakes. Measure generated audio and insert explicit freeze-frame holds between actions. Recompute downstream timing together. Protect live narration from automatic cuts.
+Implemented in the source build: Keychain-backed ElevenLabs settings, voice loading,
+editable scripts/language, segment generation/cancellation/retakes, immutable audio
+assets, measured freeze-frame holds, downstream timing and preview/export audio mix.
+Automated checks use mocked HTTP and synthetic audio; live provider and native UI
+validation remain pending. Generated scripts, audience controls and protecting live
+narration from automatic cuts are still planned.
 
 ### M3 — Presentation and layouts
 
@@ -63,3 +69,11 @@ Exercise long capture, interruptions, disk-full, provider errors, cancellation, 
 Record a new browser-editor feature. Restore or accept suggested cuts, adjust zoom, review a script, create narration, correct pacing with holds, and export a 4K/30 landscape walkthrough. Produce portrait and square versions with a framing review. Reopen the portable project on another supported Mac and continue editing.
 
 This is the release target, not a description of the current preview. Re-estimate delivery after the media and analysis proofs are complete.
+
+## Proposed next version after cursor and narration
+
+Prioritize presentation for browser feature demos: timed arrows/frames/text callouts,
+blur and opaque masks, a saved logo/color/title preset, then 9:16 and 1:1 export with
+framing review. These build on the existing single-take workflow. The next AI step
+is reviewing the existing analyzer's cut suggestions inside the editor. These are
+proposed priorities; 3D mockups and multi-recording editing remain outside this scope.

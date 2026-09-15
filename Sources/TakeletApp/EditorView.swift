@@ -2,7 +2,7 @@ import SwiftUI
 import AVKit
 import ProjectCore
 
-private enum InspectorTab: String, CaseIterable { case style = "Style", edit = "Edit" }
+private enum InspectorTab: String, CaseIterable { case style = "Style", edit = "Edit", narration = "Narration" }
 
 struct EditorView: View {
     @StateObject private var workspace = Workspace()
@@ -53,6 +53,9 @@ struct EditorView: View {
         .onAppear { workspace.undoManager = undoManager }
         .onChange(of: workspace.selectedZoomID) { _, value in
             if value != nil { inspectorTab = .edit; showInspector = true }
+        }
+        .onChange(of: workspace.selectedNarrationID) { _, value in
+            if value != nil { inspectorTab = .narration; showInspector = true }
         }
         .onChange(of: workspace.project?.padding, initial: true) { _, value in if let value { padding = value } }
         .onChange(of: workspace.project == nil, initial: true) { _, empty in captureExpanded = empty }
@@ -207,7 +210,8 @@ struct EditorView: View {
                 ScrollView {
                     VStack(spacing: 14) {
                         if inspectorTab == .style { styleControls(project) }
-                        else { editControls(project) }
+                        else if inspectorTab == .edit { editControls(project) }
+                        else { NarrationInspector(workspace: workspace, project: project) }
                     }.padding(.bottom, 8)
                 }.disabled(!workspace.canEdit)
             } else {
@@ -219,6 +223,7 @@ struct EditorView: View {
     }
 
     @ViewBuilder private func styleControls(_ project: Project) -> some View {
+        CursorInspector(workspace: workspace, project: project)
         PanelCard(title: "Background", icon: "square.on.square") {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(CanvasBackground.allCases, id: \.self) { preset in
@@ -292,6 +297,10 @@ struct EditorView: View {
             if workspace.exporting {
                 ProgressView(value: workspace.exportProgress).frame(width: 90)
                 Button("Cancel") { workspace.cancelExport() }.controlSize(.small)
+            }
+            if workspace.generatingNarrationID != nil {
+                ProgressView().controlSize(.small)
+                Button("Cancel Generation") { workspace.cancelNarration() }.controlSize(.small)
             }
         }.padding(.horizontal, 20).padding(.vertical, 10).background(Studio.panel)
     }

@@ -26,6 +26,13 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     @Published var thumbnails: [NSImage] = []
     @Published var dirty = false
     @Published var selectedZoomID: UUID?
+    @Published var selectedNarrationID: UUID?
+    @Published var generatingNarrationID: UUID?
+    @Published var cursorDraft: CursorStyle? { didSet { refreshDirtyState() } }
+    @Published var narrationDrafts: [UUID: NarrationSegment] = [:] { didSet { refreshDirtyState() } }
+    var assetURLs: [String: URL] = [:]
+    let assetDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("takelet-assets-\(UUID().uuidString)", isDirectory: true)
+    var narrationTask: Task<Void, Never>?
     weak var undoManager: UndoManager?
     private let recorder = WindowRecorder()
     private let exporter = VideoExporter()
@@ -51,15 +58,15 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         WorkspaceRegistry.shared.add(self)
     }
 
-    var canEdit: Bool { project != nil && !busy && !recording && !exporting }
+    var canEdit: Bool { project != nil && !busy && !recording && !exporting && generatingNarrationID == nil }
     var sourcePosition: Double {
         guard let project else { return 0 }
         return project.sourceTime(forOutput: min(playhead, max(0, project.outputDuration - 0.001))) ?? 0
     }
     var selectedZoom: Zoom? { project?.zooms.first { $0.id == selectedZoomID } }
     var canClose: Bool {
-        if recording || busy || exporting {
-            let alert = NSAlert(); alert.messageText = "Finish the current operation first"; alert.informativeText = "Stop recording or cancel export before closing this window."; alert.runModal(); return false
+        if recording || busy || exporting || generatingNarrationID != nil {
+            let alert = NSAlert(); alert.messageText = "Finish the current operation first"; alert.informativeText = "Stop recording or cancel generation/export before closing this window."; alert.runModal(); return false
         }
         guard dirty else { return true }
         let alert = NSAlert(); alert.messageText = "Discard unsaved changes?"; alert.informativeText = "Save the project to keep its recording and edits."
@@ -130,8 +137,10 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         var draft = Project(title: source.deletingPathExtension().lastPathComponent, duration: info.duration, width: info.width, height: info.height)
         if temporary { draft.title = "Untitled Demo" }
         draft.cursor = cursor.filter { $0.time <= info.duration }
+        draft.cursorMode = temporary ? .separate : .embedded
         try draft.validate()
         selectedZoomID = nil
+        selectedNarrationID = nil; assetURLs = [:]; discardInspectorDrafts()
         project = draft; sourceURL = source; projectURL = nil; sourceIsTemporary = temporary
         savedProject = nil; dirty = true; undoManager?.removeAllActions()
         await refreshPreview()
@@ -147,7 +156,9 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         guard let chosen else { return }
         do {
             let loaded = try ProjectStore.load(from: chosen)
+            let loadedAssets = try ProjectStore.assetURLs(for: loaded, in: chosen)
             selectedZoomID = nil
+            selectedNarrationID = nil; assetURLs = loadedAssets; discardInspectorDrafts()
             sourceURL = try ProjectStore.sourceURL(in: chosen); projectURL = chosen; project = loaded
             sourceIsTemporary = false; savedProject = loaded; dirty = false; undoManager?.removeAllActions()
             NSDocumentController.shared.noteNewRecentDocumentURL(chosen)
@@ -157,33 +168,64 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     }
 
     func saveProject() {
-        guard let project, let sourceURL, canEdit else { return }
+        guard canEdit, applyInspectorDrafts(), let project, let sourceURL else { return }
         do {
-            if let projectURL { try ProjectStore.save(project, to: projectURL) }
+            if let projectURL { try ProjectStore.save(project, to: projectURL, assets: assetURLs) }
             else {
                 let panel = NSSavePanel(); panel.allowedContentTypes = [.takeletProject]; panel.nameFieldStringValue = "\(project.title).takelet"; panel.canCreateDirectories = true
                 guard panel.runModal() == .OK, let destination = panel.url else { return }
-                try ProjectStore.create(project, source: sourceURL, at: destination)
+                try ProjectStore.create(project, source: sourceURL, at: destination, assets: assetURLs)
                 if sourceIsTemporary { try? FileManager.default.removeItem(at: sourceURL) }
                 self.sourceURL = try ProjectStore.sourceURL(in: destination); projectURL = destination; sourceIsTemporary = false
                 NSDocumentController.shared.noteNewRecentDocumentURL(destination)
                 Task { await refreshPreview() }
             }
+            if let projectURL { assetURLs.merge(try ProjectStore.assetURLs(for: project, in: projectURL)) { _, saved in saved } }
             savedProject = project; dirty = false; status = "Project saved."
         } catch { self.error = error.localizedDescription }
     }
 
-    func edit(_ next: Project, name: String) {
-        do { try next.validate() } catch { self.error = error.localizedDescription; return }
-        guard let previous = project, previous != next else { return }
+    @discardableResult func edit(_ next: Project, name: String) -> Bool {
+        do { try next.validate() } catch { self.error = error.localizedDescription; return false }
+        guard let previous = project, previous != next else { return false }
         undoManager?.registerUndo(withTarget: self) { target in
             // AppKit invokes this window's undo actions on the main thread. Keep redo registration synchronous.
             MainActor.assumeIsolated { target.edit(previous, name: name) }
         }
         undoManager?.setActionName(name)
-        project = next; dirty = next != savedProject
+        project = next
+        narrationDrafts = narrationDrafts.filter { draft in next.narrations.contains { $0.id == draft.key } }
+        refreshDirtyState()
         if let selectedZoomID, !next.zooms.contains(where: { $0.id == selectedZoomID }) { self.selectedZoomID = nil }
+        if let selectedNarrationID, !next.narrations.contains(where: { $0.id == selectedNarrationID }) { self.selectedNarrationID = nil }
         Task { await refreshPreview() }
+        return true
+    }
+
+    var hasInspectorDrafts: Bool {
+        guard let project else { return false }
+        return (cursorDraft.map { $0 != project.cursorStyle } ?? false) || narrationDrafts.contains { id, draft in
+            project.narrations.first { $0.id == id } != draft
+        }
+    }
+
+    func refreshDirtyState() { dirty = project != savedProject || hasInspectorDrafts }
+
+    func discardInspectorDrafts() { cursorDraft = nil; narrationDrafts = [:] }
+
+    /// Commit every visible inspector draft atomically before saving or generating.
+    /// Drafts belong to the workspace so changing inspector tabs cannot discard text.
+    @discardableResult func applyInspectorDrafts() -> Bool {
+        guard canEdit, var next = project else { return false }
+        if let cursorDraft { next.cursorStyle = cursorDraft }
+        for (id, draft) in narrationDrafts {
+            guard let index = next.narrations.firstIndex(where: { $0.id == id }) else { continue }
+            next.narrations[index] = Self.revisedNarration(draft, previous: next.narrations[index])
+        }
+        next.narrations.sort { $0.start < $1.start }
+        do { try next.validate() } catch { self.error = error.localizedDescription; return false }
+        if next != project, !edit(next, name: "Apply Inspector Changes") { return false }
+        discardInspectorDrafts(); return true
     }
 
     func selectZoom(_ id: UUID) {
@@ -231,7 +273,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     }
 
     func cut(start: Double, end: Double) {
-        guard var next = project else { return }
+        guard canEdit, var next = project else { return }
         next.cuts.append(TimeRange(start: start, end: end)); next.cuts.sort { $0.start < $1.start }
         edit(next, name: "Remove Interval")
     }
@@ -242,9 +284,10 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         let position = min(playhead, max(0, project.outputDuration - 0.05))
         player.pause(); isPlaying = false
         do {
-            let prepared = try await CompositionBuilder.build(project: project, source: sourceURL, width: 1280, height: 720)
+            let prepared = try await CompositionBuilder.build(project: project, source: sourceURL, width: 1280, height: 720, assets: assetURLs)
             guard generation == previewGeneration else { return }
             let item = AVPlayerItem(asset: prepared.asset); item.videoComposition = prepared.video
+            item.audioMix = prepared.audio
             player.replaceCurrentItem(with: item)
             await player.seek(to: CMTime(seconds: position, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
         } catch { if generation == previewGeneration { self.error = error.localizedDescription } }
@@ -264,8 +307,9 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     func seekSource(_ time: Double) {
         guard let project else { return }
         let source = min(max(time, 0), project.sourceDuration)
-        let removed = project.cuts.reduce(0.0) { $0 + min(max(source - $1.start, 0), $1.duration) }
-        seek(min(source - removed, max(0, project.outputDuration - 0.001)))
+        if let retained = project.retainedRanges.first(where: { $0.end > source }),
+           let output = project.outputTime(forSource: max(source, retained.start)) { seek(output) }
+        else { seek(max(0, project.outputDuration - 0.001)) }
     }
 
     func loadThumbnails() async {
@@ -289,7 +333,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     }
 
     func exportVideo(width: Int) {
-        guard let project, let sourceURL, canEdit else { return }
+        guard canEdit, applyInspectorDrafts(), let project, let sourceURL else { return }
         let panel = NSSavePanel(); panel.allowedContentTypes = [.mpeg4Movie]; panel.nameFieldStringValue = "\(project.title)-\(width == 3840 ? "4K" : "1080p").mp4"
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         exporting = true; exportProgress = 0; player.pause()
@@ -302,7 +346,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
             }
             defer { exporting = false; progress.cancel() }
             do {
-                try await exporter.export(project: project, source: sourceURL, destination: destination, width: width, height: width == 3840 ? 2160 : 1080)
+                try await exporter.export(project: project, source: sourceURL, destination: destination, width: width, height: width == 3840 ? 2160 : 1080, assets: assetURLs)
                 status = "Exported \(destination.lastPathComponent)."
                 NSWorkspace.shared.activateFileViewerSelecting([destination])
             } catch is CancellationError { status = "Export cancelled." }
@@ -310,7 +354,11 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         }
     }
     func cancelExport() { exporter.cancel() }
-    func close() { player.pause(); if let observer { player.removeTimeObserver(observer); self.observer = nil }; captureLimit?.cancel() }
+    func close() {
+        player.pause(); if let observer { player.removeTimeObserver(observer); self.observer = nil }
+        captureLimit?.cancel(); narrationTask?.cancel()
+        try? FileManager.default.removeItem(at: assetDirectory)
+    }
 }
 
 @MainActor final class WorkspaceRegistry {

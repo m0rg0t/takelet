@@ -11,7 +11,7 @@
 
 Codex's app-server supports embedding its client protocol in an application. ChatGPT authentication uses the account's Codex allowance; API-key authentication has separate billing. This does not provide a universal API key for a ChatGPT subscription. See the official [app-server documentation](https://developers.openai.com/codex/app-server) and [authentication documentation](https://developers.openai.com/codex/auth).
 
-Takelet does not copy credentials into projects or edit persistent Codex configuration. There is no automatic paid API fallback. Fresh login UI, account switching, general OpenAI-compatible providers and ElevenLabs are not implemented yet.
+Takelet does not copy credentials into projects or edit persistent Codex configuration. There is no automatic paid API fallback. Fresh login UI, account switching and general OpenAI-compatible analysis providers are not implemented yet. The native editor has a separate ElevenLabs narration client using the user's API key; it does not use Codex limits.
 
 ## Commands
 

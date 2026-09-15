@@ -18,6 +18,7 @@ struct EditorTimeline: View {
                     Text("SOURCE").font(.caption2.weight(.semibold)).foregroundStyle(.secondary).frame(height: 24)
                     Label("Video", systemImage: "film").font(.caption).frame(height: 52)
                     Label("Zoom", systemImage: "viewfinder").font(.caption).foregroundStyle(Studio.zoom).frame(height: 40)
+                    Label("Voice", systemImage: "waveform").font(.caption).foregroundStyle(.teal).frame(height: 36)
                 }.frame(width: 58, alignment: .leading)
                 VStack(spacing: 8) {
                     ruler
@@ -26,7 +27,7 @@ struct EditorTimeline: View {
             }
             HStack(spacing: 6) {
                 Image(systemName: "scissors").foregroundStyle(.secondary)
-                Text(project.cuts.isEmpty ? "Click the filmstrip to explore your take" : "\(project.cuts.count) cut\(project.cuts.count == 1 ? "" : "s") · \(String(format: "%.1f", project.sourceDuration - project.outputDuration)) s removed")
+                Text(project.cuts.isEmpty ? "Click the filmstrip to explore your take" : "\(project.cuts.count) cut\(project.cuts.count == 1 ? "" : "s") · \(String(format: "%.1f", project.sourceDuration - project.retainedDuration)) s removed")
                 Spacer()
                 Button("Add Zoom", systemImage: "plus") { workspace.addZoom(); editZoom() }
                     .buttonStyle(.borderless).disabled(!workspace.canEdit)
@@ -73,15 +74,16 @@ struct EditorTimeline: View {
                 VStack(spacing: 8) {
                     filmstrip(width: geometry.size.width).frame(height: 52)
                     zoomTrack(width: geometry.size.width).frame(height: 32)
+                    narrationTrack(width: geometry.size.width).frame(height: 28)
                 }
-                Rectangle().fill(Color.accentColor).frame(width: 2, height: 92)
+                Rectangle().fill(Color.accentColor).frame(width: 2, height: 128)
                     .overlay(alignment: .top) {
                         RoundedRectangle(cornerRadius: 2).fill(Color.accentColor).frame(width: 9, height: 7).offset(y: -4)
                     }
                     .offset(x: min(geometry.size.width - 2, geometry.size.width * sourcePosition / project.sourceDuration))
                     .allowsHitTesting(false)
             }
-        }.frame(height: 92)
+        }.frame(height: 128)
     }
 
     private func filmstrip(width: CGFloat) -> some View {
@@ -146,6 +148,36 @@ struct EditorTimeline: View {
             }
             if project.zooms.isEmpty {
                 Button("Add a zoom", systemImage: "plus") { workspace.addZoom(); editZoom() }
+                    .font(.caption).buttonStyle(.borderless).padding(.horizontal, 10).disabled(!workspace.canEdit)
+            }
+        }
+    }
+
+    private func narrationTrack(width: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 7).fill(.primary.opacity(0.035))
+            ForEach(project.narrations) { narration in
+                let span = width * narration.duration / project.sourceDuration
+                let selected = workspace.selectedNarrationID == narration.id
+                Button { workspace.selectNarration(narration.id) } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: narration.audioFile == nil ? "text.bubble" : "waveform")
+                        if span > 85 { Text(narration.script.isEmpty ? "Draft" : String(narration.script.prefix(30))).lineLimit(1) }
+                    }.font(.caption2).foregroundStyle(.teal)
+                        .frame(width: max(2, span), height: 28).clipped()
+                        .background(.teal.opacity(selected ? 0.25 : 0.12), in: RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.teal.opacity(selected ? 1 : 0.3), lineWidth: selected ? 2 : 1))
+                }.buttonStyle(.plain).offset(x: width * narration.start / project.sourceDuration)
+                    .disabled(!workspace.canEdit)
+                    .accessibilityLabel("Narration from \(timecode(narration.start)) to \(timecode(narration.end)), \(narration.audioFile == nil ? "draft" : "generated")")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .contextMenu {
+                        Button("Edit Narration") { workspace.selectNarration(narration.id) }
+                        Button("Remove Narration", role: .destructive) { workspace.removeNarration(narration.id) }
+                    }
+            }
+            if project.narrations.isEmpty {
+                Button("Add narration", systemImage: "plus") { workspace.addNarration() }
                     .font(.caption).buttonStyle(.borderless).padding(.horizontal, 10).disabled(!workspace.canEdit)
             }
         }

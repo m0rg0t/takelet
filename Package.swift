@@ -12,12 +12,14 @@ let package = Package(
     targets: [
         .target(name: "AnalysisCore"),
         .target(name: "ProjectCore"),
+        .target(name: "NarrationCore"),
         .target(name: "MediaEngine", dependencies: ["ProjectCore"]),
-        .executableTarget(name: "TakeletApp", dependencies: ["ProjectCore", "MediaEngine"], linkerSettings: [.linkedFramework("AVKit")]),
+        .executableTarget(name: "TakeletApp", dependencies: ["ProjectCore", "MediaEngine", "NarrationCore"], linkerSettings: [.linkedFramework("AVKit")]),
         .executableTarget(name: "MediaCheck", dependencies: ["ProjectCore", "MediaEngine"]),
         .executableTarget(name: "TakeletAnalyze", dependencies: ["AnalysisCore"]),
         .testTarget(name: "AnalysisCoreTests", dependencies: ["AnalysisCore"]),
         .testTarget(name: "ProjectCoreTests", dependencies: ["ProjectCore"]),
-        .testTarget(name: "TakeletAppTests", dependencies: ["TakeletApp"])
+        .testTarget(name: "TakeletAppTests", dependencies: ["TakeletApp"]),
+        .testTarget(name: "NarrationCoreTests", dependencies: ["NarrationCore"])
     ]
 )

@@ -18,8 +18,9 @@ See the [release notes and checksums](https://github.com/m0rg0t/takelet/releases
 
 ## What works today
 
-This section describes the current source build. Multiple zooms and click-based
-Auto Zoom are new since the downloadable 0.1.0 preview and are not in that DMG yet.
+This section describes the current source build. Multiple zooms, click-based Auto
+Zoom, editable cursors and ElevenLabs narration are new since the downloadable
+0.1.0 preview and are not in that DMG yet.
 
 - Import one video and save a portable `.takelet` project containing its source and edits.
 - Remove and restore source intervals, with undo/redo.
@@ -30,9 +31,18 @@ Auto Zoom are new since the downloadable 0.1.0 preview and are not in that DMG y
 - Choose one of four canvas backgrounds, adjust padding, and switch between system, light and dark appearance.
 - Preview against a padded background using the same composition engine as export.
 - Export 16:9 MP4 at 1080p or 4K, 30 fps, preserving source audio through cuts.
+- Style the separate cursor of new Takelet recordings: arrow, circle, crosshair,
+  or a custom PNG, with size, color, smoothing, click highlights and an editable hotspot.
+- Write narration for source intervals, choose an ElevenLabs voice and generate or
+  replace individual takes using your own API key stored in macOS Keychain.
+- Fit longer narration with automatic frozen-frame holds, mix original audio and
+  narration independently, and carry PNGs and generated speech in the portable project.
 - Experiment with a separate command-line analyzer that prepares frames locally and requests reviewable cut suggestions through a local Codex installation.
 
-Window recording with optional system audio and microphone input is implemented, including sampled cursor metadata. Live capture and permission handling still need end-to-end validation. The recorded cursor is currently part of the video image; editable cursor rendering is planned.
+Window recording with optional system audio and microphone input is implemented.
+New captures record a clean picture and sample the cursor separately, including
+while the screen is static. Imported videos and older projects retain their embedded
+cursor. Live capture geometry and permission handling still need end-to-end validation.
 
 ## Build and run
 
@@ -76,8 +86,36 @@ and automatic cursor following is not implemented. Repeating the command keeps
 existing zooms and does not add duplicates.
 
 Older projects open with their zoom and appearance preserved. Saving writes
-project format 2; Takelet 0.1.0 cannot open that newer format. Keep a copy of a
+project format 3; Takelet 0.1.0 cannot open that newer format. Keep a copy of a
 format-1 project if you need to continue opening it in the old release.
+
+### Cursor and narration
+
+For a new Takelet recording, open **Style → Cursor**, adjust the controls and choose
+**Apply Cursor**. Import a transparent PNG up to 2048×2048 pixels and 8 MB to use a
+custom pointer. The hotspot is the point in that image that marks the click location.
+
+In **Takelet → Settings → ElevenLabs**, save your API key and load voices. Choose
+**Narration → Add Narration at Playhead** (⌘⌥N), edit the source interval and script,
+then select a voice. Save the draft locally, or choose **Generate with ElevenLabs**
+to save it and send it for synthesis. This uses your ElevenLabs account's credits.
+Multilingual v2 detects language automatically; Flash v2.5 also accepts a two-letter
+language code such as `en` or `ru`. Other languages depend on provider support.
+
+Preview the result before export. Speech longer than its retained source interval
+holds the last retained frame and shifts downstream footage. Shorter speech leaves
+the remaining video intact. Source audio is silent during a hold; the Audio mix
+controls set original-audio and narration volume independently. Generation can be
+cancelled and is never retried automatically. Changing a script, voice, model or
+language clears that segment's generated take; Undo restores it. Timing edits reuse
+the audio and recalculate pacing. Save the project to keep all assets together.
+
+Pending script and cursor controls stay with the workspace when you switch tabs or
+segments. **Save Project** and **Export** validate and apply them together; generation from the
+menu uses the same current draft as the inspector button.
+
+The client and media path have automated checks; a real synthesis with a user-configured
+key and the full native UI workflow still require manual validation.
 
 ## AI is optional
 
@@ -85,7 +123,10 @@ Recording, manual editing, saving, and export use local macOS frameworks. Takele
 
 The experimental `takelet-analyze` CLI can use an existing **Codex-managed ChatGPT login**. Inference shares that account's Codex limits. It sends selected frames when explicitly invoked; it does not turn a ChatGPT subscription into a general API key. No automatic paid API fallback is enabled.
 
-AI suggestions are not connected to the editor UI yet. Configurable OpenAI-compatible providers, script review, and ElevenLabs narration with a personal API key are planned. Read [AI analysis](docs/AI_ANALYSIS.md) before running the prototype.
+AI cut suggestions and generated scripts are not connected to the editor UI yet.
+Configurable OpenAI-compatible analysis providers are planned. ElevenLabs narration
+accepts user-written scripts in the editor. Read [AI analysis](docs/AI_ANALYSIS.md)
+before running the separate analysis prototype.
 
 ## Project status
 

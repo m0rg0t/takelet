@@ -18,11 +18,12 @@ import SwiftUI
                         Text("Dark").tag("dark")
                     }
                 }
+                ElevenLabsSettingsView(settings: .shared)
                 Section("Takelet Developer Preview") {
                     Text("Recordings and projects are saved on your Mac.")
-                    Text("The optional Codex analyzer is currently a separate command-line tool. AI connections and narration settings will appear here in a later build.").foregroundStyle(.secondary)
+                    Text("The optional Codex analyzer is currently a separate command-line tool.").foregroundStyle(.secondary)
                 }
-            }.formStyle(.grouped).frame(width: 460, height: 300).preferredColorScheme(colorScheme)
+            }.formStyle(.grouped).frame(width: 540, height: 620).preferredColorScheme(colorScheme)
         }
     }
 }
@@ -56,6 +57,21 @@ struct TakeletCommands: Commands {
                 if let id = workspace?.selectedZoomID { workspace?.removeZoom(id) }
             }.keyboardShortcut(.delete, modifiers: [.command])
                 .disabled(workspace?.canEdit != true || workspace?.selectedZoom == nil)
+        }
+        CommandMenu("Narration") {
+            Button("Add Narration at Playhead") { workspace?.addNarration() }
+                .keyboardShortcut("n", modifiers: [.command, .option]).disabled(workspace?.canEdit != true)
+            Button("Generate Selected Narration") {
+                if let id = workspace?.selectedNarrationID { workspace?.generateNarration(id) }
+            }.keyboardShortcut("g", modifiers: [.command, .option])
+                .disabled(workspace?.canEdit != true || workspace?.selectedNarration == nil)
+            Button("Cancel Generation") { workspace?.cancelNarration() }
+                .keyboardShortcut(".", modifiers: [.command]).disabled(workspace?.generatingNarrationID == nil)
+            Divider()
+            Button("Remove Selected Narration") {
+                if let id = workspace?.selectedNarrationID { workspace?.removeNarration(id) }
+            }.keyboardShortcut(.delete, modifiers: [.command, .option])
+                .disabled(workspace?.canEdit != true || workspace?.selectedNarration == nil)
         }
     }
 }

@@ -7,10 +7,12 @@ sh scripts/swift-check.sh test
 sh scripts/build-app.sh
 ```
 
-The current suite has 40 tests covering time mapping, reversible edits, multiple zooms,
-click-based Auto Zoom, project-format migration/storage, background presets, workspace
-undo/redo and selection, AI results, and fragmented/interleaved JSONL transport,
-timeouts and EOF. Tests require Python 3 but no provider login, inference or screen access.
+The suite covers time mapping, reversible edits, multiple zooms, click-based Auto Zoom,
+cursor interpolation/styling, project-format migration and portable assets, narration
+holds and edits, cancellation and retakes, workspace undo/redo, ElevenLabs request/error
+contracts, AI results, and fragmented/interleaved JSONL transport, timeouts and EOF.
+Tests require Python 3 but no provider login, inference or screen access. A generated
+MP3 test fixture exercises audio measurement and installation without a paid request.
 
 GitHub Actions builds/tests on macOS, packages the developer app, and checks tracked files for local artifacts and obvious credentials. A local pass does not mean the remote workflow has run.
 
@@ -22,7 +24,7 @@ TAKELET_BIN_DIR="${TMPDIR:-/private/tmp}/takelet-swift/build/debug"
 "$TAKELET_BIN_DIR/takelet-media-check" artifacts/media-check-01
 ```
 
-Use a new destination. The executable generates synthetic footage and audio, with no private recording, screen permission or paid service needed. Native AVFoundation decoding/encoding needs normal macOS process services; unusually restricted execution environments may prevent them from working.
+Use a new destination. The executable generates synthetic footage and audio, with no private recording, screen permission or paid service needed. Native AVFoundation decoding/encoding needs normal macOS process services; unusually restricted execution environments may prevent them from working. The expanded cursor/narration media check needs a local Homebrew `ffmpeg` to generate actual MP3 and 60 fps test fixtures. This is a developer-check dependency; the Takelet app does not invoke ffmpeg.
 
 The fixture is six seconds at 1920×1080/30 fps, with a moving object and audio pulses at source times 1.0, 3.5 and 5.0 seconds. The project removes `[2, 3)`, applies two zooms with different scales and focus points, and uses Dawn with 9% padding. The check:
 
@@ -51,6 +53,35 @@ The updated suite passes 28 tests, including loading older documents without a b
 The redesigned native window was checked in light and dark appearance. The real filmstrip loaded, playback advanced, and the accessible filmstrip action moved the playhead to one second. Changing Dawn to Tide updated the preview; Undo restored Dawn and Redo reapplied Tide. The final SDK compatibility build repeated this Undo/Redo check successfully. Restoring the `[2, 3)` cut changed the output from five to six seconds, and Undo restored five seconds with no unsaved changes. A fresh screenshot using only generated footage appears in the README and project site. The original System appearance preference was restored after review.
 
 ## Manual checks still required
+
+### Custom cursors and ElevenLabs (unreleased)
+
+Native synthetic media validation passed at 1080p and 4K. It covers portable PNG/MP3
+assets, a cursor hotspot through zoom/cuts, hidden versus embedded cursor behavior,
+short and long narration, source-audio silence during a hold, non-frame-aligned hold
+boundaries and shared preview/export output. Separate muted-source and muted-narration
+exports verify both audio volume controls and source pulses after a hold. Both exports measured approximately
+30 fps. Sampled preview/export differences were below 0.39/255; prepared held-frame
+differences were zero and encoded differences below 0.03/255. A 60 fps alternating-frame
+source stayed exactly frozen throughout its narration hold.
+
+The checks caught two rendering regressions: inheriting variable source timing and
+stretching more than one native frame. The builder now explicitly selects 30 fps
+composition timing and stretches only a single source tick for a hold. The recorder
+also samples cursor state on a separate timer so static clean video does not stop
+cursor telemetry.
+
+Workspace tests verify a playable mock MP3 response, actual audio duration measurement,
+new immutable asset installation, Undo/Redo preserving old and new takes, script/settings
+invalidation, request preflight, provider failure, invalid audio cleanup, cancellation
+and locking edits during generation. These tests do not establish live provider access.
+
+Manual cursor controls, PNG import, settings and full narration UI remain unverified
+because the development Mac is locked. Real synthesis requires a user-configured key.
+Live clean-window recording, initial cursor/video skew, static-screen movement,
+very short clicks and window movement still need device testing. See the detailed
+[acceptance checklist](CURSOR_NARRATION.md). These source features are not in the
+published 0.1.0 DMG.
 
 ### Multiple zooms and Auto Zoom (unreleased)
 

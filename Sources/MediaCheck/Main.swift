@@ -109,7 +109,8 @@ import MediaEngine
                 results.append(["width": width, "height": height, "duration": rendered.duration, "fps": rate, "audioPulseTimes": beeps, "previewExportMeanPixelErrors": frameErrors, "zoomVsUnzoomedMeanPixelErrors": zoomDifferences, "elapsedSeconds": Date().timeIntervalSince(start)])
                 print("PASS \(width)×\(height), 30 fps, 5 s; aligned audio and preview frames.")
             }
-            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "backgroundPreset": project.background.rawValue, "zoomCount": project.zooms.count, "preparationCancellation": true, "outputs": results]
+            let cursorNarration = try await CursorNarrationCheck.run(in: root, source: source)
+            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "backgroundPreset": project.background.rawValue, "zoomCount": project.zooms.count, "preparationCancellation": true, "outputs": results, "cursorNarration": cursorNarration]
             try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("validation.json"))
         } catch { FileHandle.standardError.write(Data("Media check failed: \(error.localizedDescription)\n".utf8)); exit(1) }
     }
