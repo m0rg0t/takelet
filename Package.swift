@@ -17,6 +17,7 @@ let package = Package(
         .executableTarget(name: "MediaCheck", dependencies: ["ProjectCore", "MediaEngine"]),
         .executableTarget(name: "TakeletAnalyze", dependencies: ["AnalysisCore"]),
         .testTarget(name: "AnalysisCoreTests", dependencies: ["AnalysisCore"]),
-        .testTarget(name: "ProjectCoreTests", dependencies: ["ProjectCore"])
+        .testTarget(name: "ProjectCoreTests", dependencies: ["ProjectCore"]),
+        .testTarget(name: "TakeletAppTests", dependencies: ["TakeletApp"])
     ]
 )

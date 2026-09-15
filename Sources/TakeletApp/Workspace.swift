@@ -25,6 +25,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     @Published var isPlaying = false
     @Published var thumbnails: [NSImage] = []
     @Published var dirty = false
+    @Published var selectedZoomID: UUID?
     weak var undoManager: UndoManager?
     private let recorder = WindowRecorder()
     private let exporter = VideoExporter()
@@ -51,6 +52,11 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     }
 
     var canEdit: Bool { project != nil && !busy && !recording && !exporting }
+    var sourcePosition: Double {
+        guard let project else { return 0 }
+        return project.sourceTime(forOutput: min(playhead, max(0, project.outputDuration - 0.001))) ?? 0
+    }
+    var selectedZoom: Zoom? { project?.zooms.first { $0.id == selectedZoomID } }
     var canClose: Bool {
         if recording || busy || exporting {
             let alert = NSAlert(); alert.messageText = "Finish the current operation first"; alert.informativeText = "Stop recording or cancel export before closing this window."; alert.runModal(); return false
@@ -125,6 +131,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         if temporary { draft.title = "Untitled Demo" }
         draft.cursor = cursor.filter { $0.time <= info.duration }
         try draft.validate()
+        selectedZoomID = nil
         project = draft; sourceURL = source; projectURL = nil; sourceIsTemporary = temporary
         savedProject = nil; dirty = true; undoManager?.removeAllActions()
         await refreshPreview()
@@ -140,6 +147,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         guard let chosen else { return }
         do {
             let loaded = try ProjectStore.load(from: chosen)
+            selectedZoomID = nil
             sourceURL = try ProjectStore.sourceURL(in: chosen); projectURL = chosen; project = loaded
             sourceIsTemporary = false; savedProject = loaded; dirty = false; undoManager?.removeAllActions()
             NSDocumentController.shared.noteNewRecentDocumentURL(chosen)
@@ -174,7 +182,52 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         }
         undoManager?.setActionName(name)
         project = next; dirty = next != savedProject
+        if let selectedZoomID, !next.zooms.contains(where: { $0.id == selectedZoomID }) { self.selectedZoomID = nil }
         Task { await refreshPreview() }
+    }
+
+    func selectZoom(_ id: UUID) {
+        guard canEdit, let zoom = project?.zooms.first(where: { $0.id == id }) else { return }
+        selectedZoomID = id
+        player.pause(); isPlaying = false
+        seekSource(zoom.start + min(0.4, zoom.duration / 2))
+    }
+
+    func addZoom() {
+        guard canEdit, var next = project else { return }
+        if let existing = next.zoom(atSource: sourcePosition) {
+            selectZoom(existing.id); status = "This position already has a zoom. Select an empty part of the take to add another."; return
+        }
+        guard let zoom = ZoomPlanner.manualZoom(in: next, at: sourcePosition) else {
+            status = "Choose a longer uncut interval without a zoom."; return
+        }
+        next.zooms.append(zoom); next.zooms.sort { $0.start < $1.start }
+        edit(next, name: "Add Zoom"); selectedZoomID = zoom.id
+        status = "Zoom added at the playhead. Adjust its timing and focus in the inspector."
+    }
+
+    func updateZoom(_ zoom: Zoom) {
+        guard canEdit, var next = project, let index = next.zooms.firstIndex(where: { $0.id == zoom.id }) else { return }
+        next.zooms[index] = zoom; next.zooms.sort { $0.start < $1.start }
+        edit(next, name: "Change Zoom")
+    }
+
+    func removeZoom(_ id: UUID) {
+        guard canEdit, var next = project else { return }
+        next.zooms.removeAll { $0.id == id }
+        edit(next, name: "Remove Zoom")
+    }
+
+    func generateClickZooms() {
+        guard canEdit, var next = project else { return }
+        let additions = ZoomPlanner.clickZooms(in: next)
+        guard !additions.isEmpty else {
+            status = next.cursor.isEmpty ? "Auto Zoom needs click data from Takelet's recorder. Add manual zooms to imported videos." : "No uncovered clicks found with enough room for a zoom. Existing zooms were kept."
+            return
+        }
+        next.zooms.append(contentsOf: additions); next.zooms.sort { $0.start < $1.start }
+        edit(next, name: "Auto Zoom from Clicks"); selectedZoomID = additions.first?.id
+        status = "Added \(additions.count) editable zoom\(additions.count == 1 ? "" : "s") from clicks. Review timing and focus before export."
     }
 
     func cut(start: Double, end: Double) {
@@ -203,7 +256,10 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
             player.play(); isPlaying = true
         } else { player.pause(); isPlaying = false }
     }
-    func seek(_ time: Double) { player.seek(to: CMTime(seconds: time, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }
+    func seek(_ time: Double) {
+        playhead = time
+        player.seek(to: CMTime(seconds: time, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+    }
 
     func seekSource(_ time: Double) {
         guard let project else { return }

@@ -9,7 +9,6 @@ struct EditorView: View {
     @Environment(\.undoManager) private var undoManager
     @State private var cutStart = 0.0
     @State private var cutEnd = 1.0
-    @State private var zoom = Zoom()
     @State private var padding = 0.06
     @State private var showInspector = true
     @State private var inspectorTab = InspectorTab.style
@@ -52,7 +51,9 @@ struct EditorView: View {
         .focusedSceneValue(\.workspace, workspace)
         .background(WindowBridge(workspace: workspace))
         .onAppear { workspace.undoManager = undoManager }
-        .onChange(of: workspace.project?.zoom, initial: true) { _, value in if let value { zoom = value } }
+        .onChange(of: workspace.selectedZoomID) { _, value in
+            if value != nil { inspectorTab = .edit; showInspector = true }
+        }
         .onChange(of: workspace.project?.padding, initial: true) { _, value in if let value { padding = value } }
         .onChange(of: workspace.project == nil, initial: true) { _, empty in captureExpanded = empty }
         .task(id: workspace.sourceURL) { await workspace.loadThumbnails() }
@@ -248,6 +249,7 @@ struct EditorView: View {
     }
 
     @ViewBuilder private func editControls(_ project: Project) -> some View {
+        ZoomInspector(workspace: workspace, project: project)
         PanelCard(title: "Remove a pause", icon: "scissors") {
             HStack(spacing: 10) {
                 timeInput("Start", value: $cutStart)
@@ -270,28 +272,6 @@ struct EditorView: View {
                 }
             }
             Text("Times refer to the original take.").font(.caption2).foregroundStyle(.secondary)
-        }
-        PanelCard(title: "Zoom & focus", icon: "viewfinder") {
-            HStack(spacing: 10) { timeInput("Start", value: $zoom.start); timeInput("End", value: $zoom.end) }
-            HStack {
-                Text("Magnification").font(.callout)
-                Spacer()
-                Text("\(zoom.scale, specifier: "%.1f")×").font(.system(.callout, design: .monospaced)).foregroundStyle(Studio.zoom)
-            }
-            Slider(value: $zoom.scale, in: 1...3, step: 0.1).accessibilityLabel("Zoom scale")
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Focus point").font(.caption).foregroundStyle(.secondary)
-                FocusPicker(x: $zoom.x, y: $zoom.y)
-                HStack(spacing: 8) {
-                    Text("X").font(.caption2).foregroundStyle(.secondary)
-                    Slider(value: $zoom.x, in: 0...1).accessibilityLabel("Horizontal zoom focus")
-                    Text("Y").font(.caption2).foregroundStyle(.secondary)
-                    Slider(value: $zoom.y, in: 0...1).accessibilityLabel("Vertical zoom focus")
-                }
-            }
-            Button {
-                var next = project; next.zoom = zoom; workspace.edit(next, name: "Change Zoom")
-            } label: { Text("Apply Zoom").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).controlSize(.large)
         }
     }
 

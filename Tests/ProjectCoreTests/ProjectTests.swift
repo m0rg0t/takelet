@@ -44,13 +44,13 @@ final class ProjectTests: XCTestCase {
         }
     }
     func testZoomAndCursorUseSourceTimeAfterCuts() {
-        var p = fixture(); p.zoom.start = 6; p.zoom.end = 9; p.zoom.scale = 2
+        var p = fixture(); p.zooms = [Zoom(start: 6, end: 9, scale: 2)]
         let cursorSourceTime = 6.8
         let cursorOutputTime = p.outputTime(forSource: cursorSourceTime)!
         XCTAssertEqual(cursorOutputTime, 3.8, accuracy: 1e-9)
-        XCTAssertEqual(p.zoom.amount(at: p.sourceTime(forOutput: cursorOutputTime)!), 2)
-        XCTAssertEqual(p.zoom.amount(at: 6), 1)
-        XCTAssertEqual(p.zoom.amount(at: 9), 1)
+        XCTAssertEqual(p.zoom(atSource: p.sourceTime(forOutput: cursorOutputTime)!)?.amount(at: 6.8), 2)
+        XCTAssertEqual(p.zooms[0].amount(at: 6), 1)
+        XCTAssertEqual(p.zooms[0].amount(at: 9), 1)
     }
     func testInvalidEditsDoNotReachRendering() {
         for cuts in [[TimeRange(start: -1, end: 1)], [TimeRange(start: 0, end: 10)], [TimeRange(start: 9, end: 11)], [TimeRange(start: 2, end: 4), TimeRange(start: 3, end: 5)], [TimeRange(start: .nan, end: 2)]] {
@@ -64,9 +64,9 @@ final class ProjectTests: XCTestCase {
         XCTAssertEqual(p.sourceTime(forOutput: 5), 5)
     }
     func testMalformedZoomAndPathsRejected() {
-        var p = fixture(); p.zoom.scale = .infinity
+        var p = fixture(); p.zooms = [Zoom(scale: .infinity)]
         XCTAssertThrowsError(try p.validate())
-        p = fixture(); p.zoom.x = 1.1
+        p = fixture(); p.zooms = [Zoom(x: 1.1)]
         XCTAssertThrowsError(try p.validate())
         p = fixture(); p.sourceFile = "../private.mov"
         XCTAssertThrowsError(try p.validate())

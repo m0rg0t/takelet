@@ -51,11 +51,43 @@ Example.takelet/
     source.mov
 ```
 
-Schema version 1 stores a title, source dimensions/duration, cut intervals, one zoom, background preset, padding and cursor samples. Older documents without a background field decode as Midnight, preserving their previous appearance. Media is copied without transcoding; the fixed `.mov` filename can contain an imported MP4 container that AVFoundation detects from its contents.
+Schema version 2 stores a title, source dimensions/duration, cut intervals, a `zooms`
+array, background preset, padding and cursor samples. Each zoom has a stable UUID,
+source start/end, scale and normalized focus. Up to 512 intervals are accepted;
+duplicate IDs, overlaps, non-finite values and out-of-range settings are rejected.
+Touching intervals are allowed. Rendering selects the interval containing the
+source frame, or uses the original fitted view outside all zooms.
+
+Version-1 documents migrate in memory: an active legacy `zoom` becomes one interval
+with the same curve and focus; a disabled 1× zoom becomes an empty array. Missing
+background fields still decode as Midnight. Saving emits only format 2, which the
+0.1.0 app rejects rather than silently losing newer edits. No source media changes
+during migration. Media is copied without transcoding; the fixed `.mov` filename
+can contain an imported MP4 container that AVFoundation detects from its contents.
 
 Metadata saves are atomic. Package creation copies media into a temporary sibling directory, then renames it into place. Loading validates schema, bounds, cuts and source paths, rejecting missing sources and symlink escapes. This is not a cryptographic integrity format; external asset edits can invalidate a project.
 
 Credentials, analysis reports and provider account data are not project fields. Future generated narration will be a local media asset, with credentials in per-user secure storage.
+
+## Multiple zooms and click-based Auto Zoom
+
+`ZoomPlanner` creates manual intervals in the uncut, unoccupied range around the
+source playhead. A manual addition lasts up to two seconds and stays inside its
+available range. The inspector can subsequently edit source timing explicitly,
+including intervals spanning a cut; source-time rendering remains authoritative.
+
+Auto Zoom runs only on request. A visible sampled mouse-down edge proposes a 1.6×
+zoom focused at that sample, starting up to 0.4 seconds before and ending up to
+1.2 seconds after it. Bounds are clipped to retained footage and neighboring zooms.
+Intervals shorter than 0.8 seconds are skipped. Held buttons, out-of-frame clicks,
+clicks inside cuts and clicks already covered by zooms are ignored. Nearby clicks
+share the first interval and its focus. This is a deterministic local heuristic,
+not visual AI analysis or continuous cursor following.
+
+Generated intervals become ordinary editable zooms. The workspace adds the whole
+batch as one undo operation and never replaces existing intervals. Repeating Auto
+Zoom is idempotent while those intervals remain. Each selection, inspector edit,
+removal and export uses the same stable ID and source-time model.
 
 ## Capture
 

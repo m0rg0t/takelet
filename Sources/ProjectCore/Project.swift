@@ -8,13 +8,24 @@ public struct TimeRange: Codable, Equatable, Sendable, Identifiable {
     public init(start: Double, end: Double, id: UUID = UUID()) { self.start = start; self.end = end; self.id = id }
 }
 
-public struct Zoom: Codable, Equatable, Sendable {
-    public var start: Double = 0
-    public var end: Double = 0
-    public var scale: Double = 1
-    public var x: Double = 0.5
-    public var y: Double = 0.5
-    public init() {}
+public struct Zoom: Codable, Equatable, Sendable, Identifiable {
+    public var id: UUID
+    public var start: Double
+    public var end: Double
+    public var scale: Double
+    public var x: Double
+    public var y: Double
+    public var duration: Double { end - start }
+    public init(start: Double = 0, end: Double = 2, scale: Double = 1.6, x: Double = 0.5, y: Double = 0.5, id: UUID = UUID()) {
+        self.id = id; self.start = start; self.end = end; self.scale = scale; self.x = x; self.y = y
+    }
+    public func validate(duration: Double) throws {
+        guard [start, end, scale, x, y].allSatisfy(\.isFinite),
+              start >= 0, end > start, end <= duration,
+              (1...3).contains(scale), (0...1).contains(x), (0...1).contains(y) else {
+            throw ProjectError("Zoom times must be inside the recording, with a scale from 1× to 3× and a focus inside the frame.")
+        }
+    }
     /// Coordinates are normalized from the top-left; times are in original source seconds.
     public func amount(at sourceTime: Double) -> Double {
         guard scale > 1, end > start, sourceTime >= start, sourceTime <= end else { return 1 }
@@ -37,24 +48,28 @@ public struct CursorSample: Codable, Equatable, Sendable {
 }
 
 public struct Project: Codable, Equatable, Sendable {
-    public var version = 1
+    public var version = 2
     public var title: String
     public var sourceFile = "media/source.mov"
     public var sourceDuration: Double
     public var sourceWidth: Int
     public var sourceHeight: Int
     public var cuts: [TimeRange] = []
-    public var zoom = Zoom()
+    public var zooms: [Zoom] = []
     public var padding: Double = 0.06
     public var background: CanvasBackground = .midnight
     public var cursor: [CursorSample] = []
     public init(title: String, duration: Double, width: Int, height: Int) {
         self.title = title; sourceDuration = duration; sourceWidth = width; sourceHeight = height
-        zoom.end = duration
     }
 
     private enum CodingKeys: String, CodingKey {
-        case version, title, sourceFile, sourceDuration, sourceWidth, sourceHeight, cuts, zoom, padding, background, cursor
+        case version, title, sourceFile, sourceDuration, sourceWidth, sourceHeight, cuts, zooms, padding, background, cursor
+    }
+
+    private enum LegacyKeys: String, CodingKey { case zoom }
+    private struct LegacyZoom: Decodable {
+        let start: Double, end: Double, scale: Double, x: Double, y: Double
     }
 
     public init(from decoder: Decoder) throws {
@@ -66,7 +81,17 @@ public struct Project: Codable, Equatable, Sendable {
         sourceWidth = try values.decode(Int.self, forKey: .sourceWidth)
         sourceHeight = try values.decode(Int.self, forKey: .sourceHeight)
         cuts = try values.decode([TimeRange].self, forKey: .cuts)
-        zoom = try values.decode(Zoom.self, forKey: .zoom)
+        if version == 1 {
+            let legacy = try decoder.container(keyedBy: LegacyKeys.self).decode(LegacyZoom.self, forKey: .zoom)
+            let zoom = Zoom(start: legacy.start, end: legacy.end, scale: legacy.scale, x: legacy.x, y: legacy.y)
+            try zoom.validate(duration: sourceDuration)
+            zooms = zoom.scale > 1 ? [zoom] : []
+            version = 2
+        } else if version == 2 {
+            zooms = try values.decode([Zoom].self, forKey: .zooms)
+        } else {
+            throw ProjectError("This project was created with an unsupported version of Takelet.")
+        }
         padding = try values.decode(Double.self, forKey: .padding)
         cursor = try values.decode([CursorSample].self, forKey: .cursor)
         // Early version-1 documents predate background presets; retain their original appearance.
@@ -74,13 +99,19 @@ public struct Project: Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
-        guard version == 1, sourceDuration.isFinite, sourceDuration > 0, sourceDuration <= 601,
+        guard version == 2, sourceDuration.isFinite, sourceDuration > 0, sourceDuration <= 601,
               sourceWidth > 0, sourceHeight > 0, sourceWidth <= 16384, sourceHeight <= 16384,
-              sourceFile == "media/source.mov", padding.isFinite, (0...0.2).contains(padding),
-              [zoom.start, zoom.end, zoom.scale, zoom.x, zoom.y].allSatisfy(\.isFinite),
-              zoom.start >= 0, zoom.end > zoom.start, zoom.end <= sourceDuration,
-              (1...3).contains(zoom.scale), (0...1).contains(zoom.x), (0...1).contains(zoom.y) else {
+              sourceFile == "media/source.mov", padding.isFinite, (0...0.2).contains(padding) else {
             throw ProjectError("Invalid project settings or unsupported project version.")
+        }
+        guard zooms.count <= 512, Set(zooms.map(\.id)).count == zooms.count else {
+            throw ProjectError("A project supports up to 512 zooms with unique IDs.")
+        }
+        var zoomEnd = 0.0
+        for zoom in zooms.sorted(by: { $0.start < $1.start }) {
+            try zoom.validate(duration: sourceDuration)
+            guard zoom.start >= zoomEnd else { throw ProjectError("Zoom intervals must not overlap. Adjust their start or end times.") }
+            zoomEnd = zoom.end
         }
         var previousEnd = 0.0
         guard Set(cuts.map(\.id)).count == cuts.count else { throw ProjectError("Duplicate edit IDs.") }
@@ -109,6 +140,10 @@ public struct Project: Codable, Equatable, Sendable {
         return result
     }
     public var outputDuration: Double { sourceDuration - cuts.reduce(0) { $0 + $1.duration } }
+
+    public func zoom(atSource time: Double) -> Zoom? {
+        zooms.first { time >= $0.start && time < $0.end }
+    }
 
     public func sourceTime(forOutput time: Double) -> Double? {
         guard time.isFinite, time >= 0, time < outputDuration else { return nil }

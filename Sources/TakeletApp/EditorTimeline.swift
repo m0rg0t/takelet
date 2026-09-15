@@ -28,6 +28,9 @@ struct EditorTimeline: View {
                 Image(systemName: "scissors").foregroundStyle(.secondary)
                 Text(project.cuts.isEmpty ? "Click the filmstrip to explore your take" : "\(project.cuts.count) cut\(project.cuts.count == 1 ? "" : "s") · \(String(format: "%.1f", project.sourceDuration - project.outputDuration)) s removed")
                 Spacer()
+                Button("Add Zoom", systemImage: "plus") { workspace.addZoom(); editZoom() }
+                    .buttonStyle(.borderless).disabled(!workspace.canEdit)
+                    .help("Add a zoom at the playhead (⌘⌥Z)")
                 Text("Source \(timecode(project.sourceDuration))")
             }.font(.caption).foregroundStyle(.secondary)
         }.padding(20).background(Studio.panel)
@@ -118,22 +121,32 @@ struct EditorTimeline: View {
     private func zoomTrack(width: CGFloat) -> some View {
         ZStack(alignment: .leading) {
             RoundedRectangle(cornerRadius: 7).fill(.primary.opacity(0.035))
-            if project.zoom.scale > 1 {
-                let span = width * (project.zoom.end - project.zoom.start) / project.sourceDuration
-                Button(action: editZoom) {
+            ForEach(project.zooms) { zoom in
+                let span = width * zoom.duration / project.sourceDuration
+                let selected = workspace.selectedZoomID == zoom.id
+                Button {
+                    workspace.selectZoom(zoom.id); editZoom()
+                } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "viewfinder")
-                        if span > 70 { Text("\(project.zoom.scale, specifier: "%.1f")×").monospacedDigit() }
+                        if span > 70 { Text("\(zoom.scale, specifier: "%.1f")×").monospacedDigit() }
                     }.font(.caption.weight(.medium)).foregroundStyle(Studio.zoom)
                         .frame(width: max(2, span), height: 32)
-                        .background(Studio.zoom.opacity(0.15), in: RoundedRectangle(cornerRadius: 7))
-                        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Studio.zoom.opacity(0.25)))
-                }.buttonStyle(.plain).offset(x: width * project.zoom.start / project.sourceDuration)
-                    .accessibilityLabel("Edit zoom, \(project.zoom.scale) times")
-                    .help("Edit this zoom")
-            } else {
-                Button("Add a zoom", systemImage: "plus", action: editZoom)
-                    .font(.caption).buttonStyle(.borderless).padding(.horizontal, 10)
+                        .background(Studio.zoom.opacity(selected ? 0.28 : 0.15), in: RoundedRectangle(cornerRadius: 7))
+                        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Studio.zoom.opacity(selected ? 1 : 0.25), lineWidth: selected ? 2 : 1))
+                }.buttonStyle(.plain).offset(x: width * zoom.start / project.sourceDuration)
+                    .disabled(!workspace.canEdit)
+                    .accessibilityLabel("Zoom from \(timecode(zoom.start)) to \(timecode(zoom.end)), \(zoom.scale) times")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .help("Select to edit timing and focus. Right-click to remove.")
+                    .contextMenu {
+                        Button("Edit Zoom") { workspace.selectZoom(zoom.id); editZoom() }
+                        Button("Remove Zoom", role: .destructive) { workspace.removeZoom(zoom.id) }
+                    }
+            }
+            if project.zooms.isEmpty {
+                Button("Add a zoom", systemImage: "plus") { workspace.addZoom(); editZoom() }
+                    .font(.caption).buttonStyle(.borderless).padding(.horizontal, 10).disabled(!workspace.canEdit)
             }
         }
     }

@@ -35,7 +35,7 @@ import MediaEngine
             var project = Project(title: "A small product demo", duration: info.duration, width: info.width, height: info.height)
             project.cuts = [TimeRange(start: 2, end: 3)]
             project.background = .dawn; project.padding = 0.09
-            project.zoom.start = 0.5; project.zoom.end = 4.5; project.zoom.scale = 1.6; project.zoom.x = 0.65
+            project.zooms = [Zoom(start: 0.3, end: 1.8, scale: 1.6, x: 0.25, y: 0.3), Zoom(start: 3.4, end: 5.6, scale: 2, x: 0.8, y: 0.65)]
             project.cursor = [CursorSample(time: 1, x: 0.3, y: 0.4, visible: true, pressed: false), CursorSample(time: 3.5, x: 0.65, y: 0.5, visible: true, pressed: true)]
             let document = root.appendingPathComponent("Sample.takelet")
             try ProjectStore.create(project, source: source, at: document)
@@ -73,8 +73,14 @@ import MediaEngine
                 preview.maximumSize = CGSize(width: 640, height: 360); output.maximumSize = preview.maximumSize
                 preview.requestedTimeToleranceBefore = .zero; preview.requestedTimeToleranceAfter = .zero
                 output.requestedTimeToleranceBefore = .zero; output.requestedTimeToleranceAfter = .zero
+                var unzoomed = reopened; unzoomed.zooms = []
+                let baseline = try await CompositionBuilder.build(project: unzoomed, source: movie, width: width, height: height)
+                let baselineFrames = AVAssetImageGenerator(asset: baseline.asset); baselineFrames.videoComposition = baseline.video
+                baselineFrames.maximumSize = preview.maximumSize
+                baselineFrames.requestedTimeToleranceBefore = .zero; baselineFrames.requestedTimeToleranceAfter = .zero
                 var frameErrors: [Double] = []
-                for seconds in [1.0, 2.5, 4.0] {
+                var zoomDifferences: [Double] = []
+                for seconds in [1.0, 2.2, 3.2, 4.8] {
                     let time = CMTime(seconds: seconds, preferredTimescale: 600)
                     let p = try await preview.image(at: time).image
                     let e = try await output.image(at: time).image
@@ -86,6 +92,13 @@ import MediaEngine
                     let difference = zip(try pixels(p), try pixels(e)).map { abs(Double($0) - Double($1)) }.reduce(0, +) / Double(160 * 90 * 4)
                     guard difference < 8 else { throw ProjectError("Preview/export frame mismatch: \(difference)") }
                     frameErrors.append(difference)
+                    let plain = try await baselineFrames.image(at: time).image
+                    let zoomDifference = zip(try pixels(p), try pixels(plain)).map { abs(Double($0) - Double($1)) }.reduce(0, +) / Double(160 * 90 * 4)
+                    let shouldZoom = seconds == 1 || seconds == 3.2
+                    guard shouldZoom ? zoomDifference > 5 : zoomDifference < 1 else {
+                        throw ProjectError("Zoom activation or gap failed at output \(seconds): \(zoomDifference)")
+                    }
+                    zoomDifferences.append(zoomDifference)
                     if seconds == 1 {
                         let writer = CGImageDestinationCreateWithURL(root.appendingPathComponent("preview-\(width).png") as CFURL, UTType.png.identifier as CFString, 1, nil)!
                         CGImageDestinationAddImage(writer, e, nil); CGImageDestinationFinalize(writer)
@@ -93,10 +106,10 @@ import MediaEngine
                 }
                 let beeps = try await pulseTimes(in: destination)
                 guard beeps.count == 3, zip(beeps, [1.0, 2.5, 4.0]).allSatisfy({ abs($0 - $1) < 0.08 }) else { throw ProjectError("Audio timing mismatch: \(beeps)") }
-                results.append(["width": width, "height": height, "duration": rendered.duration, "fps": rate, "audioPulseTimes": beeps, "previewExportMeanPixelErrors": frameErrors, "elapsedSeconds": Date().timeIntervalSince(start)])
+                results.append(["width": width, "height": height, "duration": rendered.duration, "fps": rate, "audioPulseTimes": beeps, "previewExportMeanPixelErrors": frameErrors, "zoomVsUnzoomedMeanPixelErrors": zoomDifferences, "elapsedSeconds": Date().timeIntervalSince(start)])
                 print("PASS \(width)×\(height), 30 fps, 5 s; aligned audio and preview frames.")
             }
-            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "backgroundPreset": project.background.rawValue, "preparationCancellation": true, "outputs": results]
+            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "backgroundPreset": project.background.rawValue, "zoomCount": project.zooms.count, "preparationCancellation": true, "outputs": results]
             try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("validation.json"))
         } catch { FileHandle.standardError.write(Data("Media check failed: \(error.localizedDescription)\n".utf8)); exit(1) }
     }

@@ -25,7 +25,7 @@ Combining multiple recordings, 3D presentation, team cloud workspaces, Intel sup
 
 ### M0a — Native media foundation · in progress
 
-Implemented: native app shell, window recorder, portable project, reversible source cuts, one zoom interval, preview and MP4 export. Synthetic save/reopen and 1080p/4K media checks pass.
+Implemented: native app shell, window recorder, portable project, reversible source cuts, multiple zoom intervals, preview and MP4 export. Synthetic save/reopen and 1080p/4K media checks pass.
 
 Exit: record a real browser workflow with cursor and audio, save/reopen it, verify edits in the native player, and compare exported pictures and audio. Screen permissions, moving windows and capture interruption must be exercised. Current synthetic checks cover only part of this exit condition.
 
@@ -37,7 +37,14 @@ Exit: benchmark suggestions on representative recordings, measure missed actions
 
 ### M1 — Reliable single-recording editor
 
-Add display/area capture, independent cursor rendering, multiple zoom intervals, timeline interaction, autosave, recovery and richer document handling. Verify Retina/multiple-display geometry, undo/redo, missing assets and ten-minute playback.
+Implemented in the source build after 0.1.0: multiple independent zoom intervals,
+timeline selection, timing/scale/focus editing, removal and undo/redo. Local Auto
+Zoom creates editable intervals from sampled clicks, preserving existing edits and
+skipping removed footage. Version-1 projects migrate to format 2 on save.
+
+Next: display/area capture, independent cursor rendering, dragging/resizing timeline
+intervals, autosave, recovery and richer document handling. Verify Retina/multiple-display
+geometry, live click timing, missing assets and ten-minute playback.
 
 ### M2 — Narration and pacing
 

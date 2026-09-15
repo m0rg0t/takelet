@@ -45,6 +45,18 @@ struct TakeletCommands: Commands {
                 if workspace?.recording == true { workspace?.stopRecording() } else { workspace?.startRecording() }
             }.keyboardShortcut("r", modifiers: [.command, .shift]).disabled(workspace?.busy == true || workspace?.exporting == true)
         }
+        CommandMenu("Zoom") {
+            Button("Add Zoom at Playhead") { workspace?.addZoom() }
+                .keyboardShortcut("z", modifiers: [.command, .option]).disabled(workspace?.canEdit != true)
+            Button("Auto Zoom from Clicks") { workspace?.generateClickZooms() }
+                .keyboardShortcut("z", modifiers: [.command, .option, .shift])
+                .disabled(workspace?.canEdit != true || workspace?.project?.cursor.isEmpty != false)
+            Divider()
+            Button("Remove Selected Zoom") {
+                if let id = workspace?.selectedZoomID { workspace?.removeZoom(id) }
+            }.keyboardShortcut(.delete, modifiers: [.command])
+                .disabled(workspace?.canEdit != true || workspace?.selectedZoom == nil)
+        }
     }
 }
 

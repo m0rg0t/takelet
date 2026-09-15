@@ -7,7 +7,10 @@ sh scripts/swift-check.sh test
 sh scripts/build-app.sh
 ```
 
-The current suite has 28 tests covering time mapping, reversible edits, zoom timing, project validation/storage, backward-compatible background presets, AI results, and fragmented/interleaved JSONL transport, timeouts and EOF. Tests require Python 3 but no provider login, inference or screen access.
+The current suite has 40 tests covering time mapping, reversible edits, multiple zooms,
+click-based Auto Zoom, project-format migration/storage, background presets, workspace
+undo/redo and selection, AI results, and fragmented/interleaved JSONL transport,
+timeouts and EOF. Tests require Python 3 but no provider login, inference or screen access.
 
 GitHub Actions builds/tests on macOS, packages the developer app, and checks tracked files for local artifacts and obvious credentials. A local pass does not mean the remote workflow has run.
 
@@ -21,15 +24,17 @@ TAKELET_BIN_DIR="${TMPDIR:-/private/tmp}/takelet-swift/build/debug"
 
 Use a new destination. The executable generates synthetic footage and audio, with no private recording, screen permission or paid service needed. Native AVFoundation decoding/encoding needs normal macOS process services; unusually restricted execution environments may prevent them from working.
 
-The fixture is six seconds at 1920×1080/30 fps, with a moving object and audio pulses at source times 1.0, 3.5 and 5.0 seconds. The project removes `[2, 3)`, applies a zoom and uses Dawn with 9% padding. The check:
+The fixture is six seconds at 1920×1080/30 fps, with a moving object and audio pulses at source times 1.0, 3.5 and 5.0 seconds. The project removes `[2, 3)`, applies two zooms with different scales and focus points, and uses Dawn with 9% padding. The check:
 
 1. Saves and reopens the portable project without metadata changes.
 2. Exports 1920×1080 and 3840×2160 MP4.
 3. Checks five-second duration, 30 fps and an audio track.
-4. Compares three sampled preview/export frames at each resolution; mean pixel error must be below 8 on the 0–255 scale.
+4. Compares four sampled preview/export frames at each resolution; mean pixel error must be below 8 on the 0–255 scale.
 5. Verifies audio pulses at output times 1.0, 2.5 and 4.0 seconds, within 80 ms.
 6. Cancels during export preparation, checks that no destination is created, then reuses the exporter successfully.
 7. Checks that the gradient background is present in the exported pixels.
+8. Compares against a composition without zooms: both zooms must visibly change
+   their frames, while the gap and the ending must exactly retain the fitted view.
 
 Outputs include a sample project, MP4s, PNG frames and `validation.json`.
 
@@ -46,6 +51,24 @@ The updated suite passes 28 tests, including loading older documents without a b
 The redesigned native window was checked in light and dark appearance. The real filmstrip loaded, playback advanced, and the accessible filmstrip action moved the playhead to one second. Changing Dawn to Tide updated the preview; Undo restored Dawn and Redo reapplied Tide. The final SDK compatibility build repeated this Undo/Redo check successfully. Restoring the `[2, 3)` cut changed the output from five to six seconds, and Undo restored five seconds with no unsaved changes. A fresh screenshot using only generated footage appears in the README and project site. The original System appearance preference was restored after review.
 
 ## Manual checks still required
+
+### Multiple zooms and Auto Zoom (unreleased)
+
+The 40-test suite passes, including batched Undo/Redo with stable zoom IDs, editing
+and deleting one zoom without changing another, rejecting overlapping edits, and
+mapping the output playhead through cuts when adding a zoom. Core tests cover
+legacy active/disabled zoom migration, click edges and held buttons, out-of-frame
+clicks, cut boundaries, clipping at neighboring intervals, and repeated generation.
+
+The native media check passed at 1080p and 4K. Both zooms changed the expected
+frames; unzoomed gaps matched the baseline exactly. Sampled preview/export mean
+pixel error stayed below 0.38/255 and audio offsets were approximately 0.1 ms.
+Cancellation and portable project save/reopen passed.
+
+Manual interaction with the new timeline selection and inspector is pending: the
+development Mac was locked during this update. Live capture click timing and very
+short click detection also remain unverified. The source build includes these
+features; the public 0.1.0 DMG does not.
 
 ### Downloadable 0.1.0 preview
 

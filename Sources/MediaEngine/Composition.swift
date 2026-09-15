@@ -75,8 +75,9 @@ public enum CompositionBuilder {
             let fit = min(inner.width / extent.width, inner.height / extent.height)
             let frame = CGRect(x: canvas.midX - extent.width * fit / 2, y: canvas.midY - extent.height * fit / 2, width: extent.width * fit, height: extent.height * fit)
             let sourceTime = project.sourceTime(forOutput: request.compositionTime.seconds) ?? project.sourceDuration
-            let scale = fit * project.zoom.amount(at: sourceTime)
-            let focus = CGPoint(x: extent.minX + extent.width * project.zoom.x, y: extent.minY + extent.height * (1 - project.zoom.y))
+            let zoom = project.zoom(atSource: sourceTime)
+            let scale = fit * (zoom?.amount(at: sourceTime) ?? 1)
+            let focus = CGPoint(x: extent.minX + extent.width * (zoom?.x ?? 0.5), y: extent.minY + extent.height * (1 - (zoom?.y ?? 0.5)))
             let tx = min(frame.minX - extent.minX * scale, max(frame.maxX - extent.maxX * scale, frame.midX - focus.x * scale))
             let ty = min(frame.minY - extent.minY * scale, max(frame.maxY - extent.maxY * scale, frame.midY - focus.y * scale))
             let image = input.transformed(by: CGAffineTransform(a: scale, b: 0, c: 0, d: scale, tx: tx, ty: ty)).cropped(to: frame).composited(over: background).cropped(to: canvas)

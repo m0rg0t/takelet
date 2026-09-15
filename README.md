@@ -18,9 +18,14 @@ See the [release notes and checksums](https://github.com/m0rg0t/takelet/releases
 
 ## What works today
 
+This section describes the current source build. Multiple zooms and click-based
+Auto Zoom are new since the downloadable 0.1.0 preview and are not in that DMG yet.
+
 - Import one video and save a portable `.takelet` project containing its source and edits.
 - Remove and restore source intervals, with undo/redo.
-- Set one smooth zoom interval, its scale and focus point.
+- Add multiple smooth zoom intervals, each with its own timing, scale and focus point.
+- Select and remove zooms on the timeline; edit them in the inspector with undo/redo.
+- Create editable zooms locally from recorded clicks using **Zoom → Auto Zoom from Clicks**. Existing zooms are preserved; imported videos without click data use manual zooms.
 - Scrub a filmstrip of real source frames and see cuts and zoom timing on separate tracks.
 - Choose one of four canvas backgrounds, adjust padding, and switch between system, light and dark appearance.
 - Preview against a padded background using the same composition engine as export.
@@ -55,6 +60,24 @@ TAKELET_BIN_DIR="${TMPDIR:-/private/tmp}/takelet-swift/build/debug"
 In Takelet, choose **Open Project…** and select `artifacts/first-demo/Sample.takelet`. The check generates a six-second recording, removes one second, and creates verified 1080p and 4K exports. Use a new output folder on each run.
 
 To use your own footage, choose **Import Video…**, set cut and zoom intervals in source seconds, then save the project and export. The current limit is one source recording of approximately ten minutes per project; long-recording reliability is still being measured.
+
+### Work with zooms
+
+Scrub to an unzoomed part of the take and choose **Add Zoom** (⌘⌥Z). Select a
+purple timeline interval to change its source start/end times, magnification and
+focus in **Edit → Zoom & focus**, then choose **Apply Zoom**. **Preview Zoom**
+seeks to its full magnification. Right-click an interval to remove it; ⌘Z restores
+it. Intervals cannot overlap.
+
+For a Takelet recording with click samples, **Auto Zoom from Clicks** (⌘⌥⇧Z)
+adds zooms around spaced mouse-down events in retained footage. It uses no AI or
+network connection. Review the results: sampled cursor data can miss short clicks,
+and automatic cursor following is not implemented. Repeating the command keeps
+existing zooms and does not add duplicates.
+
+Older projects open with their zoom and appearance preserved. Saving writes
+project format 2; Takelet 0.1.0 cannot open that newer format. Keep a copy of a
+format-1 project if you need to continue opening it in the old release.
 
 ## AI is optional
 
