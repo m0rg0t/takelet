@@ -6,7 +6,7 @@ Takelet is a native macOS recorder and editor for short tutorials, feature annou
 
 **Developer preview · macOS 15+ · Apple Silicon · MIT**
 
-[Project site](https://m0rg0t.github.io/takelet/) · [Build from source](#build-and-run) · [Roadmap](docs/ROADMAP.md)
+[Project site](https://m0rg0t.github.io/takelet/) · [ChatGPT Sites](https://takelet.antonlenev.chatgpt.site/) · [Build from source](#build-and-run) · [Roadmap](docs/ROADMAP.md)
 
 The first native editing slice and an experimental Codex analyzer are available from source. There is no signed release download yet. See the [roadmap](docs/ROADMAP.md) for the full first-release scope and remaining work.
 
