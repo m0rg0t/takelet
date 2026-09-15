@@ -26,7 +26,7 @@ struct AnnotationInspector: View {
             if !project.annotations.isEmpty {
                 Divider()
                 Picker("Annotation", selection: Binding(get: { workspace.selectedAnnotationID }, set: { id in
-                    if let id { workspace.selectAnnotation(id) }
+                    if let id { workspace.selectAnnotation(id) } else { workspace.selectedAnnotationID = nil }
                 })) {
                     Text("Choose an annotation").tag(Optional<UUID>.none)
                     ForEach(Array(project.annotations.enumerated()), id: \.element.id) { index, annotation in
