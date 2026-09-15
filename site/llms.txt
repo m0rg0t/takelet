@@ -1,0 +1,27 @@
+# Takelet
+
+> Takelet is a free, MIT-licensed, native macOS screen recorder and product-demo editor. It turns a single recording into a focused demo with reversible cuts, a smooth zoom, and local MP4 export.
+
+The current release is v0.1.0, a developer preview for Apple Silicon Macs running macOS 15 or later. The downloadable DMG is Developer ID signed and Apple notarized. Manual editing and export work locally without an account or API key.
+
+Window recording and the separate Codex command-line analysis workflow are experimental. The Codex analyzer sends selected frames when explicitly run and uses the signed-in account's shared Codex limits. Narration, editable cursors, portrait and square export, and in-app AI review are planned, not currently shipped features.
+
+## Overview and download
+
+- [Product overview in Markdown](https://m0rg0t.github.io/takelet/index.md): Features, requirements, installation, limitations, and privacy.
+- [Project website](https://m0rg0t.github.io/takelet/): Canonical public landing page.
+- [Latest releases](https://github.com/m0rg0t/takelet/releases): Published builds, release notes, and checksums; v0.1.0 is a prerelease.
+- [Download v0.1.0 for Apple Silicon](https://github.com/m0rg0t/takelet/releases/download/v0.1.0/Takelet-0.1.0-arm64.dmg): Signed and notarized macOS disk image.
+
+## Documentation
+
+- [README](https://raw.githubusercontent.com/m0rg0t/takelet/main/README.md): Current project status and source-build instructions.
+- [AI analysis and privacy](https://raw.githubusercontent.com/m0rg0t/takelet/main/docs/AI_ANALYSIS.md): Experimental Codex workflow, consent, frame preparation, and data handling.
+- [Roadmap](https://raw.githubusercontent.com/m0rg0t/takelet/main/docs/ROADMAP.md): Planned capabilities and implementation milestones.
+- [MIT license](https://raw.githubusercontent.com/m0rg0t/takelet/main/LICENSE): Terms for use, modification, and redistribution.
+
+## Optional
+
+- [Source repository](https://github.com/m0rg0t/takelet): Swift sources, issues, and development history.
+- [Contributing](https://raw.githubusercontent.com/m0rg0t/takelet/main/CONTRIBUTING.md): Development and contribution guidance.
+- [Public mirror](https://takelet.antonlenev.chatgpt.site/): The same website hosted on ChatGPT Sites; GitHub Pages is canonical.

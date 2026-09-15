@@ -20,8 +20,10 @@ python3 -m http.server 4173 --bind 127.0.0.1 --directory site
 ```
 
 Open <http://127.0.0.1:4173/>. Stop the server with Ctrl-C when finished.
-The static check verifies local links, anchors, image alt attributes and relative
-asset paths; it does not replace browser, mobile or accessibility testing.
+The static check verifies local links, anchors, image alt attributes, relative
+asset paths, SEO metadata, social-image dimensions, JSON-LD consistency, the
+sitemap, and Markdown links. It does not replace browser, mobile or accessibility
+testing.
 
 ## Publish to GitHub Pages
 
@@ -76,3 +78,40 @@ matches. Keep source-build instructions and the developer-preview status visible
 `assets/editor-dark.png` is a real Takelet window using generated media from
 `takelet-media-check`. Refresh it through a native window screenshot when the UI
 changes. Do not publish customer recordings, private projects or provider keys.
+
+## Search, sharing, and AI-readable documentation
+
+The shared HTML contains a descriptive search title, description, canonical URL,
+indexing directives, Open Graph and X large-card metadata, and Schema.org
+`WebSite`, `WebPage`, and `SoftwareApplication` data. Keep release versions,
+download URLs, requirements, and feature claims consistent with the visible page.
+Do not invent ratings or reviews. The schema describes the app; it does not
+guarantee eligibility for Google's software-app rich results.
+
+- `site/og.png` is the branded social card. Both hosts reference its absolute
+  GitHub Pages URL. Keep its dimensions and alt text in sync with the HTML.
+- `site/sitemap.xml` lists the canonical homepage. Sections are anchors, not
+  separate pages. Add new canonical HTML pages when the site grows. No synthetic
+  `lastmod` date is emitted on routine builds.
+- `site/robots.txt` allows crawling and points to the canonical sitemap. Robots
+  rules apply only at an origin's `/robots.txt`: this file is effective at the
+  ChatGPT Sites root, while GitHub serves it under `/takelet/robots.txt`, where
+  crawlers do not use it as host policy. This project does not manage the GitHub
+  account site's root robots file.
+- `site/index.md` is a concise Markdown edition of the product page.
+- `site/llms.txt` is a curated Markdown documentation index. HTML discovery links
+  expose both files. Keep shipped, experimental, and planned capabilities distinct
+  in all three editions. `llms.txt` is a proposed convention, not a guarantee of
+  AI crawler support, inclusion, or ranking.
+
+GitHub Pages remains canonical on both hosts to consolidate duplicate content.
+If the primary address changes, update the HTML, JSON-LD, social-image URLs,
+sitemap, robots sitemap pointer, and Markdown links together. The checker runs
+in the Pages workflow before deployment. After publishing, confirm that both
+hosts serve the HTML, image, sitemap, and text files publicly. Search engines
+and social platforms decide when to crawl or refresh cached previews.
+
+References: [Open Graph](https://ogp.me/),
+[Google software-app structured data](https://developers.google.com/search/docs/appearance/structured-data/software-app),
+[Google robots.txt location rules](https://developers.google.com/crawling/docs/robots-txt/create-robots-txt),
+and the [llms.txt proposal](https://llmstxt.org/).

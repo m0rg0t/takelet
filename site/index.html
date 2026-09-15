@@ -4,16 +4,77 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101411">
-  <title>Takelet — One take. A clearer story.</title>
-  <meta name="description" content="An open source macOS screen recorder and demo editor. Shape a single take with reversible cuts, smooth zoom, and local MP4 export.">
+  <title>Takelet — Open-source macOS screen recorder &amp; demo editor</title>
+  <meta name="description" content="Free, open-source screen recorder and demo editor for macOS. Trim pauses, add smooth zoom, and export 1080p or 4K MP4 locally. Get the developer preview.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://m0rg0t.github.io/takelet/">
+  <link rel="alternate" type="text/markdown" href="./index.md" title="Takelet in Markdown">
+  <link rel="describedby" href="./llms.txt" type="text/plain">
+  <link rel="sitemap" href="./sitemap.xml" type="application/xml">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Takelet">
+  <meta property="og:locale" content="en_US">
   <meta property="og:title" content="Takelet — One take. A clearer story.">
-  <meta property="og:description" content="A native, open source macOS editor for focused product demos. Download the signed developer preview for Apple Silicon.">
+  <meta property="og:description" content="Free, open-source screen recorder and demo editor for macOS. Reversible cuts, smooth zoom, and local 4K export. Download the developer preview.">
   <meta property="og:url" content="https://m0rg0t.github.io/takelet/">
+  <meta property="og:image" content="https://m0rg0t.github.io/takelet/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1730">
+  <meta property="og:image:height" content="909">
+  <meta property="og:image:alt" content="Takelet — One take. A clearer story. Open source screen recorder and demo editor, made for macOS. Pale lime cinematic frames on a dark green background.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Takelet — One take. A clearer story.">
+  <meta name="twitter:description" content="Free, open-source screen recorder and demo editor for macOS. Reversible cuts, smooth zoom, and local 4K export. Download the developer preview.">
+  <meta name="twitter:image" content="https://m0rg0t.github.io/takelet/og.png">
+  <meta name="twitter:image:alt" content="Takelet — One take. A clearer story. Open source screen recorder and demo editor, made for macOS. Pale lime cinematic frames on a dark green background.">
   <link rel="icon" type="image/svg+xml" href="./assets/mark.svg">
   <link rel="stylesheet" href="./style.css">
   <script src="./site.js" defer></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://m0rg0t.github.io/takelet/#website",
+        "url": "https://m0rg0t.github.io/takelet/",
+        "name": "Takelet",
+        "inLanguage": "en"
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://m0rg0t.github.io/takelet/#webpage",
+        "url": "https://m0rg0t.github.io/takelet/",
+        "name": "Takelet — Open-source macOS screen recorder & demo editor",
+        "description": "Free, open-source screen recorder and demo editor for macOS. Trim pauses, add smooth zoom, and export 1080p or 4K MP4 locally. Get the developer preview.",
+        "inLanguage": "en",
+        "isPartOf": {"@id": "https://m0rg0t.github.io/takelet/#website"},
+        "mainEntity": {"@id": "https://m0rg0t.github.io/takelet/#app"},
+        "primaryImageOfPage": {"@type": "ImageObject", "url": "https://m0rg0t.github.io/takelet/og.png"}
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://m0rg0t.github.io/takelet/#app",
+        "name": "Takelet",
+        "url": "https://m0rg0t.github.io/takelet/",
+        "description": "A free, open-source macOS screen recorder and demo editor. Developer preview with reversible cuts, smooth zoom, and local MP4 export; window recording is experimental.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "macOS 15 or later",
+        "processorRequirements": "Apple Silicon (arm64)",
+        "softwareVersion": "0.1.0",
+        "isAccessibleForFree": true,
+        "license": "https://github.com/m0rg0t/takelet/blob/main/LICENSE",
+        "sameAs": ["https://github.com/m0rg0t/takelet"],
+        "downloadUrl": "https://github.com/m0rg0t/takelet/releases/download/v0.1.0/Takelet-0.1.0-arm64.dmg",
+        "releaseNotes": "https://github.com/m0rg0t/takelet/releases/tag/v0.1.0",
+        "screenshot": "https://m0rg0t.github.io/takelet/assets/editor-dark.png",
+        "image": "https://m0rg0t.github.io/takelet/og.png",
+        "featureList": ["Video import", "Portable .takelet projects", "Reversible cuts", "Smooth zoom and focus", "Canvas presets", "Local 16:9 MP4 export at 1080p or 4K, 30 fps"],
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD", "url": "https://m0rg0t.github.io/takelet/#build"}
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -32,7 +93,7 @@
       <div class="hero-copy">
         <h1 id="hero-title">One take.<br>A <em>clearer</em> story.</h1>
         <div class="hero-aside">
-          <p>Turn a screen recording into a focused product demo. Cut the pauses, bring details closer, and keep the whole project on your Mac.</p>
+          <p>A free, open-source screen recorder and demo editor for macOS. Cut the pauses, bring details closer, and turn your recording into a focused product demo.</p>
           <div class="actions">
             <a class="button primary" href="https://github.com/m0rg0t/takelet/releases/download/v0.1.0/Takelet-0.1.0-arm64.dmg">Download for Mac <span aria-hidden="true">↓</span></a>
             <a class="text-link" href="https://github.com/m0rg0t/takelet">Explore the source</a>
