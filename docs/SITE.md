@@ -39,16 +39,18 @@ change, revert its commit and let the same workflow deploy the previous content.
 
 ## Publish to ChatGPT Sites
 
-`.openai/hosting.json` identifies the existing Site and selects `site/` as the
-static directory. It contains no credentials. The Site is public by the owner's
+`.openai/hosting.json` identifies the existing Site and selects `dist/` as the
+static output directory. It contains no credentials. The Site is public by the owner's
 request. Use the installed **Sites hosting** skill and connector to publish:
 
 1. Validate the site and commit the reviewed source. Push `main` to GitHub.
 2. Reuse the manifest's Site ID and obtain a short-lived source write credential.
 3. Push the same commit to the returned Sites source repository and branch, using
    per-command authentication. Never save the token in a file or Git configuration.
-4. Read the full commit SHA after the push succeeds. Package with the hosting
-   skill's helper; only static assets and required hosting metadata are deployed.
+4. Read the full commit SHA after the push succeeds. Run
+   `python3 scripts/build-site.py` to copy the validated `site/` into the generated
+   `dist/` directory, then package with the hosting skill's helper. Only static
+   assets and required hosting metadata are deployed. Do not author files in `dist/`.
 5. Save the archive with that exact commit, deploy the saved version to the
    existing public Site, and wait for successful deployment.
 
