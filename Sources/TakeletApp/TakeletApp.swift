@@ -73,6 +73,23 @@ struct TakeletCommands: Commands {
             }.keyboardShortcut(.delete, modifiers: [.command, .option])
                 .disabled(workspace?.canEdit != true || workspace?.selectedNarration == nil)
         }
+        CommandMenu("Markup") {
+            Button("Add Arrow") { workspace?.addAnnotation(.arrow) }
+                .keyboardShortcut("a", modifiers: [.command, .option]).disabled(workspace?.canEdit != true)
+            Button("Add Frame") { workspace?.addAnnotation(.frame) }.disabled(workspace?.canEdit != true)
+            Button("Add Text") { workspace?.addAnnotation(.text) }.disabled(workspace?.canEdit != true)
+            Divider()
+            Button("Add Blur Mask") { workspace?.addAnnotation(.blur) }.disabled(workspace?.canEdit != true)
+            Button("Add Opaque Mask") { workspace?.addAnnotation(.cover) }
+                .keyboardShortcut("k", modifiers: [.command, .option]).disabled(workspace?.canEdit != true)
+            Divider()
+            Button("Duplicate Selected Annotation") {
+                if let id = workspace?.selectedAnnotationID { workspace?.duplicateAnnotation(id) }
+            }.disabled(workspace?.canEdit != true || workspace?.selectedAnnotation == nil)
+            Button("Remove Selected Annotation") {
+                if let id = workspace?.selectedAnnotationID { workspace?.removeAnnotation(id) }
+            }.disabled(workspace?.canEdit != true || workspace?.selectedAnnotation == nil)
+        }
     }
 }
 

@@ -41,7 +41,7 @@ Implemented in the source build after 0.1.0: multiple independent zoom intervals
 timeline selection, timing/scale/focus editing, removal and undo/redo. Local Auto
 Zoom creates editable intervals from sampled clicks, preserving existing edits and
 skipping removed footage. Editable separate cursors now support built-in shapes,
-custom PNGs and click styling. Versions 1/2 migrate to format 3 on save.
+custom PNGs and click styling. Older projects migrate to format 4 on save.
 
 Next: display/area capture, dragging/resizing timeline
 intervals, autosave, recovery and richer document handling. Verify Retina/multiple-display
@@ -58,7 +58,14 @@ narration from automatic cuts are still planned.
 
 ### M3 — Presentation and layouts
 
-Add portrait/square framing, editable backgrounds, titles, logo/color presets, callouts and manual masks. Changing aspect ratio must preserve proportions and allow framing review. A redacted export does not redact the originals in its project package.
+Implemented in the source build: timed arrows, frames and text labels; rectangular
+blur and opaque masks; source-frame placement with dragging/resizing; layer ordering,
+duplication and undo/redo. Preview and export share the annotation renderer, including
+cuts, zooms and narration holds. See [Callouts and masks](ANNOTATIONS.md).
+
+Next: portrait/square framing, more background controls, titles and logo/color
+presets. Changing aspect ratio must preserve proportions and allow framing review.
+A redacted export does not redact the originals in its project package.
 
 ### M4 — Pilot and distribution
 
@@ -72,8 +79,9 @@ This is the release target, not a description of the current preview. Re-estimat
 
 ## Proposed next version after cursor and narration
 
-Prioritize presentation for browser feature demos: timed arrows/frames/text callouts,
-blur and opaque masks, a saved logo/color/title preset, then 9:16 and 1:1 export with
+Timed arrows/frames/text callouts and blur/opaque masks are now implemented in the
+source build. Continue presentation for browser feature demos with a saved
+logo/color/title preset, then 9:16 and 1:1 export with
 framing review. These build on the existing single-take workflow. The next AI step
 is reviewing the existing analyzer's cut suggestions inside the editor. These are
 proposed priorities; 3D mockups and multi-recording editing remain outside this scope.

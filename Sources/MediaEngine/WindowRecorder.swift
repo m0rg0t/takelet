@@ -9,6 +9,22 @@ public struct CaptureWindow: Identifiable, @unchecked Sendable {
     public var title: String { "\(window.owningApplication?.applicationName ?? "App") — \(window.title ?? "Untitled window")" }
 }
 
+/// The state of macOS Screen Recording access for Takelet.
+public enum ScreenCapturePermission: Equatable, Sendable {
+    case authorized
+    case notGranted
+}
+
+/// Permission failures are kept separate from capture/runtime failures so the
+/// UI can show inline setup guidance instead of presenting a generic alert.
+public enum ScreenCapturePermissionError: Error, LocalizedError, Equatable, Sendable {
+    case required
+
+    public var errorDescription: String? {
+        "Enable Screen Recording for Takelet in System Settings, then refresh the window list."
+    }
+}
+
 /// Capture callbacks share a serial queue. MainActor owns recording lifecycle and UI state.
 @MainActor public final class WindowRecorder: NSObject {
     private var stream: SCStream?
@@ -23,7 +39,38 @@ public struct CaptureWindow: Identifiable, @unchecked Sendable {
     public var onFailure: ((Error) -> Void)?
     public init(onFailure: ((Error) -> Void)? = nil) { self.onFailure = onFailure; super.init() }
 
+    private static var screenCaptureRequestWasMade = false
+
+    /// A side-effect-free preflight. It never displays a system prompt.
+    public static var screenCapturePermission: ScreenCapturePermission {
+        if CGPreflightScreenCaptureAccess() { return .authorized }
+        return .notGranted
+    }
+
+    /// Requests access once for this app session. Call this only from an
+    /// explicit user action such as Refresh Windows; it never runs on init.
+    @discardableResult
+    public static func requestScreenCapturePermission() -> ScreenCapturePermission {
+        if CGPreflightScreenCaptureAccess() { return .authorized }
+        guard !screenCaptureRequestWasMade else { return .notGranted }
+        screenCaptureRequestWasMade = true
+        return CGRequestScreenCaptureAccess() ? .authorized : .notGranted
+    }
+
+    /// The System Settings destination for the user-facing permission button.
+    public static let screenCaptureSettingsURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!
+
+    /// Opens System Settings only when the caller explicitly invokes it.
+    @discardableResult
+    public static func openScreenCaptureSettings() -> Bool {
+        NSWorkspace.shared.open(screenCaptureSettingsURL)
+    }
+
     public static func windows() async throws -> [CaptureWindow] {
+        let permission = screenCapturePermission
+        guard permission == .authorized else {
+            throw ScreenCapturePermissionError.required
+        }
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         return content.windows.filter {
             $0.windowLayer == 0 && $0.frame.width > 100 && $0.frame.height > 100 && $0.owningApplication?.processID != ProcessInfo.processInfo.processIdentifier

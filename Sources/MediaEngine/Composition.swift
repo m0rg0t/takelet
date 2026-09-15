@@ -112,6 +112,11 @@ public enum CompositionBuilder {
             cursorRenderer = try CursorRenderer(samples: project.cursor, style: project.cursorStyle, customImage: customImage)
         }
         let preparedCursor = cursorRenderer
+        let preparedAnnotations = project.annotations.isEmpty ? nil : try AnnotationRenderer(
+            annotations: project.annotations,
+            sourceWidth: project.sourceWidth,
+            sourceHeight: project.sourceHeight
+        )
         let canvas = CGRect(x: 0, y: 0, width: width, height: height)
         let colors = project.background.colors.map { CIColor(red: $0.red, green: $0.green, blue: $0.blue) }
         guard let gradient = CIFilter(name: "CILinearGradient", parameters: [
@@ -136,7 +141,8 @@ public enum CompositionBuilder {
             let tx = min(frame.minX - extent.minX * scale, max(frame.maxX - extent.maxX * scale, frame.midX - focus.x * scale))
             let ty = min(frame.minY - extent.minY * scale, max(frame.maxY - extent.maxY * scale, frame.midY - focus.y * scale))
             let withCursor = preparedCursor?.composite(over: input, sourceTime: sourceTime) ?? input
-            let image = withCursor.transformed(by: CGAffineTransform(a: scale, b: 0, c: 0, d: scale, tx: tx, ty: ty)).cropped(to: frame).composited(over: background).cropped(to: canvas)
+            let annotated = preparedAnnotations?.composite(over: withCursor, sourceTime: sourceTime) ?? withCursor
+            let image = annotated.transformed(by: CGAffineTransform(a: scale, b: 0, c: 0, d: scale, tx: tx, ty: ty)).cropped(to: frame).composited(over: background).cropped(to: canvas)
             request.finish(with: image, context: nil)
         }
         rendered.renderSize = canvas.size

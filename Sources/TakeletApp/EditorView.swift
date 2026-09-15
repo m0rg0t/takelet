@@ -2,7 +2,7 @@ import SwiftUI
 import AVKit
 import ProjectCore
 
-private enum InspectorTab: String, CaseIterable { case style = "Style", edit = "Edit", narration = "Narration" }
+private enum InspectorTab: String, CaseIterable { case style = "Style", edit = "Edit", annotations = "Markup", narration = "Voice" }
 
 struct EditorView: View {
     @StateObject private var workspace = Workspace()
@@ -22,9 +22,11 @@ struct EditorView: View {
                 if let project = workspace.project {
                     preview(project)
                     Divider()
-                    EditorTimeline(workspace: workspace, project: project) {
+                    EditorTimeline(workspace: workspace, project: project, editZoom: {
                         inspectorTab = .edit; showInspector = true
-                    }
+                    }, editAnnotation: {
+                        inspectorTab = .annotations; showInspector = true
+                    })
                 } else { welcome }
                 Divider()
                 statusBar
@@ -56,6 +58,9 @@ struct EditorView: View {
         }
         .onChange(of: workspace.selectedNarrationID) { _, value in
             if value != nil { inspectorTab = .narration; showInspector = true }
+        }
+        .onChange(of: workspace.selectedAnnotationID) { _, value in
+            if value != nil { inspectorTab = .annotations; showInspector = true }
         }
         .onChange(of: workspace.project?.padding, initial: true) { _, value in if let value { padding = value } }
         .onChange(of: workspace.project == nil, initial: true) { _, empty in captureExpanded = empty }
@@ -141,6 +146,12 @@ struct EditorView: View {
             }
             Button("Refresh Windows", systemImage: "arrow.clockwise") { workspace.refreshWindows() }
                 .disabled(workspace.busy || workspace.recording || workspace.exporting)
+            if workspace.showCapturePermissionHelp {
+                Text("Allow Takelet to record your screen in System Settings, then reopen the app. You can still import a video.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Open System Settings…", systemImage: "gearshape") { workspace.openCaptureSettings() }
+                    .font(.caption)
+            }
             Toggle("System audio", isOn: $workspace.systemAudio)
             Toggle("Microphone", isOn: $workspace.microphone)
             Button(workspace.recording ? "Stop Recording" : "Start Recording", systemImage: workspace.recording ? "stop.fill" : "record.circle") {
@@ -211,6 +222,7 @@ struct EditorView: View {
                     VStack(spacing: 14) {
                         if inspectorTab == .style { styleControls(project) }
                         else if inspectorTab == .edit { editControls(project) }
+                        else if inspectorTab == .annotations { AnnotationInspector(workspace: workspace, project: project) }
                         else { NarrationInspector(workspace: workspace, project: project) }
                     }.padding(.bottom, 8)
                 }.disabled(!workspace.canEdit)

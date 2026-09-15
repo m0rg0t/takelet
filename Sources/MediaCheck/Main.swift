@@ -12,8 +12,11 @@ import MediaEngine
 @main struct MediaCheck {
     @MainActor static func main() async {
         do {
-            guard CommandLine.arguments.count == 2 else { throw ProjectError("Usage: takelet-media-check NEW_OUTPUT_DIRECTORY") }
-            let root = URL(fileURLWithPath: CommandLine.arguments[1])
+            let annotationOnly = CommandLine.arguments.count == 3 && CommandLine.arguments[1] == "--annotations"
+            guard CommandLine.arguments.count == 2 || annotationOnly else {
+                throw ProjectError("Usage: takelet-media-check [--annotations] NEW_OUTPUT_DIRECTORY")
+            }
+            let root = URL(fileURLWithPath: CommandLine.arguments[annotationOnly ? 2 : 1])
             guard !FileManager.default.fileExists(atPath: root.path) else { throw ProjectError("Choose a new output directory.") }
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             let video = root.appendingPathComponent("generated-video.mov")
@@ -31,6 +34,12 @@ import MediaEngine
             try composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)!.insertTimeRange(full, of: a, at: .zero)
             let combine = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough)!
             try await combine.export(to: source, as: .mov)
+            if annotationOnly {
+                let annotations = try await AnnotationCheck.run(in: root, source: source)
+                let report: [String: Any] = ["syntheticFixture": true, "annotations": annotations]
+                try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("validation.json"))
+                return
+            }
             let info = try await MediaInspector.inspect(source)
             var project = Project(title: "A small product demo", duration: info.duration, width: info.width, height: info.height)
             project.cuts = [TimeRange(start: 2, end: 3)]
@@ -110,7 +119,8 @@ import MediaEngine
                 print("PASS \(width)×\(height), 30 fps, 5 s; aligned audio and preview frames.")
             }
             let cursorNarration = try await CursorNarrationCheck.run(in: root, source: source)
-            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "backgroundPreset": project.background.rawValue, "zoomCount": project.zooms.count, "preparationCancellation": true, "outputs": results, "cursorNarration": cursorNarration]
+            let annotations = try await AnnotationCheck.run(in: root, source: source)
+            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "backgroundPreset": project.background.rawValue, "zoomCount": project.zooms.count, "preparationCancellation": true, "outputs": results, "cursorNarration": cursorNarration, "annotations": annotations]
             try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("validation.json"))
         } catch { FileHandle.standardError.write(Data("Media check failed: \(error.localizedDescription)\n".utf8)); exit(1) }
     }

@@ -1,5 +1,6 @@
 import SwiftUI
 import AVKit
+import ScreenCaptureKit
 import UniformTypeIdentifiers
 import ProjectCore
 import MediaEngine
@@ -13,6 +14,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     @Published var player = AVPlayer()
     @Published var windows: [CaptureWindow] = []
     @Published var selectedWindowID: UInt32?
+    @Published var showCapturePermissionHelp = false
     @Published var systemAudio = true
     @Published var microphone = false
     @Published var recording = false
@@ -27,9 +29,11 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     @Published var dirty = false
     @Published var selectedZoomID: UUID?
     @Published var selectedNarrationID: UUID?
+    @Published var selectedAnnotationID: UUID?
     @Published var generatingNarrationID: UUID?
     @Published var cursorDraft: CursorStyle? { didSet { refreshDirtyState() } }
     @Published var narrationDrafts: [UUID: NarrationSegment] = [:] { didSet { refreshDirtyState() } }
+    @Published var annotationDrafts: [UUID: Annotation] = [:] { didSet { refreshDirtyState() } }
     var assetURLs: [String: URL] = [:]
     let assetDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("takelet-assets-\(UUID().uuidString)", isDirectory: true)
     var narrationTask: Task<Void, Never>?
@@ -76,6 +80,10 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
 
     func refreshWindows() {
         guard !busy, !recording, !exporting else { return }
+        guard WindowRecorder.requestScreenCapturePermission() == .authorized else {
+            showCapturePermissionGuidance(); return
+        }
+        showCapturePermissionHelp = false
         busy = true
         Task {
             defer { busy = false }
@@ -83,7 +91,25 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
                 windows = try await WindowRecorder.windows()
                 if !windows.contains(where: { $0.id == selectedWindowID }) { selectedWindowID = windows.first?.id }
                 status = windows.isEmpty ? "No eligible windows found. Open another app and refresh." : "Select the window you want to record."
-            } catch { self.error = "\(error.localizedDescription) Enable Takelet in System Settings → Privacy & Security → Screen & System Audio Recording, then reopen Takelet." }
+            } catch {
+                let nsError = error as NSError
+                if error is ScreenCapturePermissionError ||
+                    (nsError.domain == SCStreamError.errorDomain && nsError.code == SCStreamError.userDeclined.rawValue) {
+                    showCapturePermissionGuidance()
+                } else { self.error = error.localizedDescription }
+            }
+        }
+    }
+
+    func showCapturePermissionGuidance() {
+        windows = []; selectedWindowID = nil
+        showCapturePermissionHelp = true
+        status = "Enable Takelet in System Settings → Privacy & Security → Screen & System Audio Recording, then reopen Takelet."
+    }
+
+    func openCaptureSettings() {
+        if !WindowRecorder.openScreenCaptureSettings() {
+            status = "Open System Settings → Privacy & Security → Screen & System Audio Recording."
         }
     }
 
@@ -140,6 +166,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         draft.cursorMode = temporary ? .separate : .embedded
         try draft.validate()
         selectedZoomID = nil
+        selectedAnnotationID = nil
         selectedNarrationID = nil; assetURLs = [:]; discardInspectorDrafts()
         project = draft; sourceURL = source; projectURL = nil; sourceIsTemporary = temporary
         savedProject = nil; dirty = true; undoManager?.removeAllActions()
@@ -158,6 +185,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
             let loaded = try ProjectStore.load(from: chosen)
             let loadedAssets = try ProjectStore.assetURLs(for: loaded, in: chosen)
             selectedZoomID = nil
+            selectedAnnotationID = nil
             selectedNarrationID = nil; assetURLs = loadedAssets; discardInspectorDrafts()
             sourceURL = try ProjectStore.sourceURL(in: chosen); projectURL = chosen; project = loaded
             sourceIsTemporary = false; savedProject = loaded; dirty = false; undoManager?.removeAllActions()
@@ -195,9 +223,19 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         undoManager?.setActionName(name)
         project = next
         narrationDrafts = narrationDrafts.filter { draft in next.narrations.contains { $0.id == draft.key } }
+        annotationDrafts = annotationDrafts.filter { draft in
+            guard let annotation = next.annotations.first(where: { $0.id == draft.key }) else { return false }
+            // A history action that changes this annotation owns its visible state.
+            // Keep pending controls for unrelated annotations intact.
+            if undoManager?.isUndoing == true || undoManager?.isRedoing == true {
+                return previous.annotations.first { $0.id == draft.key } == annotation
+            }
+            return true
+        }
         refreshDirtyState()
         if let selectedZoomID, !next.zooms.contains(where: { $0.id == selectedZoomID }) { self.selectedZoomID = nil }
         if let selectedNarrationID, !next.narrations.contains(where: { $0.id == selectedNarrationID }) { self.selectedNarrationID = nil }
+        if let selectedAnnotationID, !next.annotations.contains(where: { $0.id == selectedAnnotationID }) { self.selectedAnnotationID = nil }
         Task { await refreshPreview() }
         return true
     }
@@ -206,12 +244,14 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         guard let project else { return false }
         return (cursorDraft.map { $0 != project.cursorStyle } ?? false) || narrationDrafts.contains { id, draft in
             project.narrations.first { $0.id == id } != draft
+        } || annotationDrafts.contains { id, draft in
+            project.annotations.first { $0.id == id } != draft
         }
     }
 
     func refreshDirtyState() { dirty = project != savedProject || hasInspectorDrafts }
 
-    func discardInspectorDrafts() { cursorDraft = nil; narrationDrafts = [:] }
+    func discardInspectorDrafts() { cursorDraft = nil; narrationDrafts = [:]; annotationDrafts = [:] }
 
     /// Commit every visible inspector draft atomically before saving or generating.
     /// Drafts belong to the workspace so changing inspector tabs cannot discard text.
@@ -223,6 +263,10 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
             next.narrations[index] = Self.revisedNarration(draft, previous: next.narrations[index])
         }
         next.narrations.sort { $0.start < $1.start }
+        for (id, draft) in annotationDrafts {
+            guard let index = next.annotations.firstIndex(where: { $0.id == id }) else { continue }
+            next.annotations[index] = draft
+        }
         do { try next.validate() } catch { self.error = error.localizedDescription; return false }
         if next != project, !edit(next, name: "Apply Inspector Changes") { return false }
         discardInspectorDrafts(); return true

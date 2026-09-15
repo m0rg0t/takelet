@@ -54,6 +54,32 @@ The redesigned native window was checked in light and dark appearance. The real 
 
 ## Manual checks still required
 
+### Callouts, masks and capture permission guidance (unreleased)
+
+The updated unit suite passes 102 tests. Annotation coverage includes format 4
+migration, geometry boundaries and floating-point resize endpoints, half-open
+visibility, overlap, portable saves, draft persistence, atomic application with
+cursor/narration controls, ordering, duplication and Undo/Redo. Undo invalidates
+stale drafts for the changed annotation while preserving unrelated pending edits.
+
+The standalone `takelet-media-check --annotations NEW_OUTPUT_DIRECTORY` check
+passed native 1080p and 4K MP4 exports. Both measured 6.0667 seconds including the
+synthetic narration hold. Sampled preview/export mean pixel errors were below
+0.70/255 at 1080p and 0.54/255 at 4K. The cover exactly matched a solid patch over
+the underlying cursor and callouts. Blur changed its rectangle and left the
+surrounding pixels unchanged. Annotation-free frames before and after the interval
+matched the baseline exactly; active frames and held frames retained the intended
+annotations through cuts and zooms. Cyrillic multiline text rendered, impossible
+text fits failed explicitly, and the portable annotated project reopened unchanged.
+
+The native UI could not be exercised because the development Mac was locked.
+Still check moving/resizing all four corners, switching inspector tabs, duplicate
+and overlapping selections, the smallest window size, and Apply/Cancel in the
+placement sheet. Permission setup now uses preflight plus inline guidance; exercise
+the initial macOS dialog, denial, opening settings and relaunch with permission.
+The code change does not grant screen-recording access. These features are in the
+source build, not the published 0.1.0 DMG.
+
 ### Custom cursors and ElevenLabs (unreleased)
 
 Native synthetic media validation passed at 1080p and 4K. It covers portable PNG/MP3

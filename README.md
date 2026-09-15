@@ -19,7 +19,7 @@ See the [release notes and checksums](https://github.com/m0rg0t/takelet/releases
 ## What works today
 
 This section describes the current source build. Multiple zooms, click-based Auto
-Zoom, editable cursors and ElevenLabs narration are new since the downloadable
+Zoom, editable cursors, ElevenLabs narration, callouts and masks are new since the downloadable
 0.1.0 preview and are not in that DMG yet.
 
 - Import one video and save a portable `.takelet` project containing its source and edits.
@@ -37,6 +37,8 @@ Zoom, editable cursors and ElevenLabs narration are new since the downloadable
   replace individual takes using your own API key stored in macOS Keychain.
 - Fit longer narration with automatic frozen-frame holds, mix original audio and
   narration independently, and carry PNGs and generated speech in the portable project.
+- Add timed arrows, frames and text labels; place and resize them on the original frame.
+- Apply blur or opaque rectangular masks, with source timing, layer ordering and undo/redo.
 - Experiment with a separate command-line analyzer that prepares frames locally and requests reviewable cut suggestions through a local Codex installation.
 
 Window recording with optional system audio and microphone input is implemented.
@@ -86,7 +88,7 @@ and automatic cursor following is not implemented. Repeating the command keeps
 existing zooms and does not add duplicates.
 
 Older projects open with their zoom and appearance preserved. Saving writes
-project format 3; Takelet 0.1.0 cannot open that newer format. Keep a copy of a
+project format 4; Takelet 0.1.0 cannot open that newer format. Keep a copy of a
 format-1 project if you need to continue opening it in the old release.
 
 ### Cursor and narration
@@ -116,6 +118,26 @@ menu uses the same current draft as the inspector button.
 
 The client and media path have automated checks; a real synthesis with a user-configured
 key and the full native UI workflow still require manual validation.
+
+### Callouts and masks
+
+Open **Markup** in the inspector and choose **Add Callout** or **Add Mask**. Set
+source start/end times, or choose **Use Entire Take**. **Place on Frame…** opens
+the original frame: drag the outline to move it and a corner to resize it. You can
+also enter position and size as percentages. Choose **Apply Annotation** to update
+the composed preview. Save and Export also apply pending annotation controls.
+
+Arrows have four directions; frames have adjustable line width; text labels wrap
+and fit inside a colored box. Duplicate annotations and change their layer order
+in the inspector. Masks always cover callouts and the cursor. Use an opaque mask
+for private text; blur softens details. Masks remain at a fixed source position,
+so review the full interval when content moves. The original video in the project
+package remains unchanged. See [Callouts and masks](docs/ANNOTATIONS.md).
+
+If recording access is missing, **Refresh Windows** requests permission once and
+shows an inline **Open System Settings…** action. Enable Takelet under
+**Privacy & Security → Screen & System Audio Recording**, then reopen the app.
+Import and editing work without screen-recording access.
 
 ## AI is optional
 

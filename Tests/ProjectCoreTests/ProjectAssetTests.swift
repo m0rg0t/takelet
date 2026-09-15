@@ -50,7 +50,7 @@ final class ProjectAssetTests: XCTestCase {
         )
     }
 
-    func testVersionTwoMigratesWithSchemaThreeDefaults() throws {
+    func testVersionTwoMigratesWithCurrentDefaults() throws {
         let json = """
         {"version":2,"title":"Version two","sourceFile":"media/source.mov","sourceDuration":10,
         "sourceWidth":1920,"sourceHeight":1080,"cuts":[],"zooms":[],"padding":0.06,
@@ -59,22 +59,24 @@ final class ProjectAssetTests: XCTestCase {
         let project = try JSONDecoder().decode(Project.self, from: Data(json.utf8))
         try project.validate()
 
-        XCTAssertEqual(project.version, 3)
+        XCTAssertEqual(project.version, 4)
         XCTAssertEqual(project.background, .dawn)
         XCTAssertEqual(project.cursorMode, .embedded)
         XCTAssertEqual(project.cursorStyle, .default)
         XCTAssertTrue(project.narrations.isEmpty)
         XCTAssertEqual(project.sourceAudioVolume, 1)
         XCTAssertEqual(project.narrationVolume, 1)
+        XCTAssertTrue(project.annotations.isEmpty)
 
         let encoded = try JSONEncoder().encode(project)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        XCTAssertEqual(object["version"] as? Int, 3)
+        XCTAssertEqual(object["version"] as? Int, 4)
         XCTAssertNotNil(object["cursorMode"])
         XCTAssertNotNil(object["cursorStyle"])
         XCTAssertNotNil(object["narrations"])
         XCTAssertNotNil(object["sourceAudioVolume"])
         XCTAssertNotNil(object["narrationVolume"])
+        XCTAssertNotNil(object["annotations"])
     }
 
     func testNarrationAndCursorAssetsSurviveSaveReopenAndMove() throws {

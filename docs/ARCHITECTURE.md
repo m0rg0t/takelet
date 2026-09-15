@@ -29,7 +29,7 @@ The analysis report is separate from the editor. A future UI will let the user r
 
 ## Time model
 
-Cuts, zoom bounds and cursor samples use **source seconds**. Preview and export use **output seconds**. Cuts are half-open source intervals: a cut from 2 to 3 removes `[2, 3)`.
+Cuts, zooms, annotations and cursor samples use **source seconds**. Preview and export use **output seconds**. Cuts are half-open source intervals: a cut from 2 to 3 removes `[2, 3)`.
 
 For a six-second source with that cut, output time 2 maps to source time 3; output time 4 maps to source time 5. A time inside the removed interval has no output position. `Project` owns both mappings so video, audio and visual effects follow the same edit decisions.
 
@@ -60,9 +60,9 @@ Example.takelet/
     narration/<UUID>.mp3
 ```
 
-Schema version 3 stores a title, source dimensions/duration, cut intervals, a `zooms`
+Schema version 4 stores a title, source dimensions/duration, cut intervals, a `zooms`
 array, background preset, padding, cursor samples/mode/style, narration segments,
-and source/narration volume. Each zoom has a stable UUID,
+source/narration volume, and an `annotations` array. Each zoom has a stable UUID,
 source start/end, scale and normalized focus. Up to 512 intervals are accepted;
 duplicate IDs, overlaps, non-finite values and out-of-range settings are rejected.
 Touching intervals are allowed. Rendering selects the interval containing the
@@ -71,7 +71,8 @@ source frame, or uses the original fitted view outside all zooms.
 Version-1 documents migrate in memory: an active legacy `zoom` becomes one interval
 with the same curve and focus; a disabled 1× zoom becomes an empty array. Missing
 background fields still decode as Midnight. Versions 1 and 2 default to an embedded
-cursor, no narration and unchanged audio levels. Saving emits only format 3, which the
+cursor, no narration and unchanged audio levels. Versions 1–3 migrate with empty
+annotations. Format 4 requires the annotation field. Saving emits only format 4, which the
 0.1.0 app rejects rather than silently losing newer edits. No source media changes
 during migration. Media is copied without transcoding; the fixed `.mov` filename
 can contain an imported MP4 container that AVFoundation detects from its contents.
@@ -97,6 +98,32 @@ They contribute to document dirty state and are committed atomically before Save
 Export or Generate. Invalid pending intervals prevent the operation instead of saving
 partial controls or sending stale text to a paid provider.
 
+## Callouts and masks
+
+`Annotation` stores a stable UUID, half-open source interval, kind, normalized
+top-left source rectangle and style. The project accepts up to 64 overlapping
+annotations with unique IDs. Arrow direction, line thickness, label text/color/size
+and blur strength remain editable. Style lengths use the shorter source edge.
+
+`AnnotationRenderer` composites arrows, frames and labels in project array order,
+then applies all masks in their array order. Opaque masks cover the source cursor
+and callouts; blur changes only its rectangle. Both are applied before the shared
+zoom/framing transform. Output time maps to source time once, including narration
+holds, so a frozen picture retains its annotations. Mask edges and visibility have
+no animated fades. Originals remain unredacted in the project package.
+
+Arrow and CoreText label sprites are prepared before video rendering, with bounded
+bitmap dimensions and area (roughly 1 MB per sprite, up to 64 sprites). Labels wrap
+and reduce font size to fit; text that still cannot fit produces an actionable
+error rather than silently dropping characters. There is no per-frame AppKit draw.
+
+The placement sheet uses the same renderer on a resized original frame. Only the
+selection outline and handles are SwiftUI decorations. Workspace-owned drafts mark
+the document dirty, survive selection changes, and commit with other inspector
+changes before Save/Export. Applied edits, duplication, removal and ordering use
+the document undo manager. Bounds remain fixed in source space; object tracking
+and animated callouts are future work.
+
 ## Multiple zooms and click-based Auto Zoom
 
 `ZoomPlanner` creates manual intervals in the uncut, unoccupied range around the
@@ -120,6 +147,12 @@ removal and export uses the same stable ID and source-time model.
 ## Capture
 
 The first recorder uses ScreenCaptureKit's independent-window filter and direct H.264/MP4 recording output. It requests 30 fps and caps dimensions within 3840×2160. Microphone and system audio are optional. Cursor position and sampled left-button state are collected on a serial frame callback queue.
+
+Window discovery preflights screen-recording access without a prompt. An explicit
+Refresh Windows action can request access once per app session. Missing access or
+ScreenCaptureKit's user-declined result shows inline settings guidance, so no app
+error alert stacks on top of the macOS permission dialog. Boolean preflight cannot
+distinguish pending permission from a denial; the UI does not infer that distinction.
 
 New recordings set `showsCursor = false`. A serial 30 Hz timer samples position and
 left-button state independently of changing video frames, using the stream clock

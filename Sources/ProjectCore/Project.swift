@@ -48,7 +48,7 @@ public struct CursorSample: Codable, Equatable, Sendable {
 }
 
 public struct Project: Codable, Equatable, Sendable {
-    public var version = 3
+    public var version = 4
     public var title: String
     public var sourceFile = "media/source.mov"
     public var sourceDuration: Double
@@ -64,13 +64,15 @@ public struct Project: Codable, Equatable, Sendable {
     public var narrations: [NarrationSegment] = []
     public var sourceAudioVolume: Double = 1
     public var narrationVolume: Double = 1
+    /// Source-time annotations in persisted list order. Render callouts first, then masks; preserve order within each layer.
+    public var annotations: [Annotation] = []
     public init(title: String, duration: Double, width: Int, height: Int) {
         self.title = title; sourceDuration = duration; sourceWidth = width; sourceHeight = height
     }
 
     private enum CodingKeys: String, CodingKey {
         case version, title, sourceFile, sourceDuration, sourceWidth, sourceHeight, cuts, zooms, padding, background, cursor
-        case cursorMode, cursorStyle, narrations, sourceAudioVolume, narrationVolume
+        case cursorMode, cursorStyle, narrations, sourceAudioVolume, narrationVolume, annotations
     }
 
     private enum LegacyKeys: String, CodingKey { case zoom }
@@ -94,7 +96,7 @@ public struct Project: Codable, Equatable, Sendable {
             try zoom.validate(duration: sourceDuration)
             zooms = zoom.scale > 1 ? [zoom] : []
             version = 2
-        } else if version == 2 || version == 3 {
+        } else if version == 2 || version == 3 || version == 4 {
             zooms = try values.decode([Zoom].self, forKey: .zooms)
         } else {
             throw ProjectError("This project was created with an unsupported version of Takelet.")
@@ -103,18 +105,21 @@ public struct Project: Codable, Equatable, Sendable {
         cursor = try values.decode([CursorSample].self, forKey: .cursor)
         // Early version-1 documents predate background presets; retain their original appearance.
         background = try values.decodeIfPresent(CanvasBackground.self, forKey: .background) ?? .midnight
-        if storedVersion == 3 {
+        if storedVersion >= 3 {
             cursorMode = try values.decode(CursorRecordingMode.self, forKey: .cursorMode)
             cursorStyle = try values.decode(CursorStyle.self, forKey: .cursorStyle)
             narrations = try values.decode([NarrationSegment].self, forKey: .narrations)
             sourceAudioVolume = try values.decode(Double.self, forKey: .sourceAudioVolume)
             narrationVolume = try values.decode(Double.self, forKey: .narrationVolume)
         }
-        version = 3
+        if storedVersion == 4 {
+            annotations = try values.decode([Annotation].self, forKey: .annotations)
+        }
+        version = 4
     }
 
     public func validate() throws {
-        guard version == 3, sourceDuration.isFinite, sourceDuration > 0, sourceDuration <= 601,
+        guard version == 4, sourceDuration.isFinite, sourceDuration > 0, sourceDuration <= 601,
               sourceWidth > 0, sourceHeight > 0, sourceWidth <= 16384, sourceHeight <= 16384,
               sourceFile == "media/source.mov", padding.isFinite, (0...0.2).contains(padding) else {
             throw ProjectError("Invalid project settings or unsupported project version.")
@@ -126,6 +131,12 @@ public struct Project: Codable, Equatable, Sendable {
         }
         guard zooms.count <= 512, Set(zooms.map(\.id)).count == zooms.count else {
             throw ProjectError("A project supports up to 512 zooms with unique IDs.")
+        }
+        guard annotations.count <= 64, Set(annotations.map(\.id)).count == annotations.count else {
+            throw ProjectError("A project supports up to 64 annotations with unique IDs.")
+        }
+        for annotation in annotations {
+            try annotation.validate(duration: sourceDuration)
         }
         var zoomEnd = 0.0
         for zoom in zooms.sorted(by: { $0.start < $1.start }) {

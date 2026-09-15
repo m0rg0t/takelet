@@ -5,6 +5,7 @@ struct EditorTimeline: View {
     @ObservedObject var workspace: Workspace
     let project: Project
     let editZoom: () -> Void
+    let editAnnotation: () -> Void
 
     private var sourcePosition: Double {
         project.sourceTime(forOutput: min(workspace.playhead, max(0, project.outputDuration - 0.001))) ?? 0
@@ -19,6 +20,7 @@ struct EditorTimeline: View {
                     Label("Video", systemImage: "film").font(.caption).frame(height: 52)
                     Label("Zoom", systemImage: "viewfinder").font(.caption).foregroundStyle(Studio.zoom).frame(height: 40)
                     Label("Voice", systemImage: "waveform").font(.caption).foregroundStyle(.teal).frame(height: 36)
+                    Label("Markup", systemImage: "square.and.pencil").font(.caption).foregroundStyle(.orange).frame(height: 36)
                 }.frame(width: 58, alignment: .leading)
                 VStack(spacing: 8) {
                     ruler
@@ -75,15 +77,51 @@ struct EditorTimeline: View {
                     filmstrip(width: geometry.size.width).frame(height: 52)
                     zoomTrack(width: geometry.size.width).frame(height: 32)
                     narrationTrack(width: geometry.size.width).frame(height: 28)
+                    annotationTrack(width: geometry.size.width).frame(height: 28)
                 }
-                Rectangle().fill(Color.accentColor).frame(width: 2, height: 128)
+                Rectangle().fill(Color.accentColor).frame(width: 2, height: 164)
                     .overlay(alignment: .top) {
                         RoundedRectangle(cornerRadius: 2).fill(Color.accentColor).frame(width: 9, height: 7).offset(y: -4)
                     }
                     .offset(x: min(geometry.size.width - 2, geometry.size.width * sourcePosition / project.sourceDuration))
                     .allowsHitTesting(false)
             }
-        }.frame(height: 128)
+        }.frame(height: 164)
+    }
+
+    private func annotationTrack(width: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 7).fill(.primary.opacity(0.035))
+            ForEach(project.annotations) { annotation in
+                let span = width * annotation.duration / project.sourceDuration
+                let selected = workspace.selectedAnnotationID == annotation.id
+                Button { workspace.selectAnnotation(annotation.id); editAnnotation() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: annotation.kind.symbol)
+                        if span > 75 { Text(annotation.kind == .text ? String(annotation.text.prefix(25)) : annotation.kind.title).lineLimit(1) }
+                    }.font(.caption2).foregroundStyle(.orange)
+                        .frame(width: max(2, span), height: 28).clipped()
+                        .background(.orange.opacity(selected ? 0.3 : 0.12), in: RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.orange.opacity(selected ? 1 : 0.35), lineWidth: selected ? 2 : 1))
+                }.buttonStyle(.plain).offset(x: width * annotation.start / project.sourceDuration)
+                    .zIndex(selected ? 1 : 0).disabled(!workspace.canEdit)
+                    .accessibilityLabel("\(annotation.kind.title) from \(timecode(annotation.start)) to \(timecode(annotation.end))")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .help("Select to edit. Use the Markup picker to choose overlapping annotations.")
+                    .contextMenu {
+                        Button("Edit \(annotation.kind.title)") { workspace.selectAnnotation(annotation.id); editAnnotation() }
+                        Button("Duplicate") { workspace.duplicateAnnotation(annotation.id) }
+                        Button("Remove", role: .destructive) { workspace.removeAnnotation(annotation.id) }
+                    }
+            }
+            if project.annotations.isEmpty {
+                Menu("Add callout or mask", systemImage: "plus") {
+                    ForEach(AnnotationKind.allCases, id: \.self) { kind in
+                        Button(kind.title, systemImage: kind.symbol) { workspace.addAnnotation(kind) }
+                    }
+                }.font(.caption).menuStyle(.borderlessButton).fixedSize().padding(.horizontal, 10).disabled(!workspace.canEdit)
+            }
+        }
     }
 
     private func filmstrip(width: CGFloat) -> some View {
