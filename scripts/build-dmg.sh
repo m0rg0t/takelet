@@ -53,7 +53,7 @@ xcrun stapler validate "$app"
 spctl --assess --type execute --verbose=2 "$app"
 
 stage="$(mktemp -d "$release_dir/staging.XXXXXX")"
-mount_dir="$release_dir/mounted"
+mount_dir=""
 mounted=0
 cleanup() {
     if [[ "$mounted" == 1 ]]; then hdiutil detach "$mount_dir" -quiet || true; fi
@@ -84,8 +84,14 @@ xcrun stapler validate "$dmg"
 codesign --verify --strict "$dmg"
 spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
 hdiutil verify "$dmg"
-mkdir -p "$mount_dir"
-hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir" -quiet
+hdiutil attach "$dmg" -nobrowse -readonly -plist > "$release_dir/mount-info.plist"
+mount_dir="$(python3 - "$release_dir/mount-info.plist" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], 'rb') as file:
+    info = plistlib.load(file)
+print(next(item['mount-point'] for item in info['system-entities'] if 'mount-point' in item))
+PY
+)"
 mounted=1
 codesign --verify --deep --strict "$mount_dir/Takelet.app"
 xcrun stapler validate "$mount_dir/Takelet.app"
