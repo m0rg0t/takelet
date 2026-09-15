@@ -6,17 +6,21 @@ Takelet is a native macOS recorder and editor for short tutorials, feature annou
 
 **Developer preview · macOS 15+ · Apple Silicon · MIT**
 
+[Project site](https://m0rg0t.github.io/takelet/) · [Build from source](#build-and-run) · [Roadmap](docs/ROADMAP.md)
+
 The first native editing slice and an experimental Codex analyzer are available from source. There is no signed release download yet. See the [roadmap](docs/ROADMAP.md) for the full first-release scope and remaining work.
 
 ![Takelet editor showing a synthetic demo, source timeline, cuts and zoom controls](docs/images/editor.png)
 
-*Actual developer preview with generated test footage.*
+*The native editor in dark appearance, using generated test footage. See [Editor design](docs/DESIGN.md) for the design direction.*
 
 ## What works today
 
 - Import one video and save a portable `.takelet` project containing its source and edits.
 - Remove and restore source intervals, with undo/redo.
 - Set one smooth zoom interval, its scale and focus point.
+- Scrub a filmstrip of real source frames and see cuts and zoom timing on separate tracks.
+- Choose one of four canvas backgrounds, adjust padding, and switch between system, light and dark appearance.
 - Preview against a padded background using the same composition engine as export.
 - Export 16:9 MP4 at 1080p or 4K, 30 fps, preserving source audio through cuts.
 - Experiment with a separate command-line analyzer that prepares frames locally and requests reviewable cut suggestions through a local Codex installation.
@@ -64,10 +68,12 @@ The automated native media check has passed for 1080p and 4K at 30 fps, includin
 
 - [Roadmap and first-release scope](docs/ROADMAP.md)
 - [Architecture and project format](docs/ARCHITECTURE.md)
+- [Editor design](docs/DESIGN.md)
 - [Testing and known limitations](docs/TESTING.md)
 - [Experimental AI analysis](docs/AI_ANALYSIS.md)
 - [Contributing](CONTRIBUTING.md) · [Security and privacy](SECURITY.md)
 - [Project identity and publication checklist](docs/PUBLISHING.md)
+- [Project site and GitHub Pages deployment](docs/SITE.md)
 
 ## License
 

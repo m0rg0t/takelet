@@ -22,6 +22,8 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     @Published var error: String?
     @Published var status = "Create a recording or import a video to begin."
     @Published var playhead = 0.0
+    @Published var isPlaying = false
+    @Published var thumbnails: [NSImage] = []
     @Published var dirty = false
     weak var undoManager: UndoManager?
     private let recorder = WindowRecorder()
@@ -35,7 +37,10 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
 
     init() {
         observer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: 600), queue: .main) { [weak self] time in
-            Task { @MainActor in self?.playhead = time.seconds.isFinite ? time.seconds : 0 }
+            Task { @MainActor in
+                self?.playhead = time.seconds.isFinite ? time.seconds : 0
+                self?.isPlaying = self?.player.rate != 0
+            }
         }
         recorder.onFailure = { [weak self] error in
             guard let self else { return }
@@ -57,6 +62,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
     }
 
     func refreshWindows() {
+        guard !busy, !recording, !exporting else { return }
         busy = true
         Task {
             defer { busy = false }
@@ -178,7 +184,7 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         guard let project, let sourceURL else { return }
         previewGeneration += 1; let generation = previewGeneration
         let position = min(playhead, max(0, project.outputDuration - 0.05))
-        player.pause()
+        player.pause(); isPlaying = false
         do {
             let prepared = try await CompositionBuilder.build(project: project, source: sourceURL, width: 1280, height: 720)
             guard generation == previewGeneration else { return }
@@ -188,8 +194,40 @@ extension UTType { static let takeletProject = UTType(exportedAs: "io.github.m0r
         } catch { if generation == previewGeneration { self.error = error.localizedDescription } }
     }
 
-    func togglePlayback() { if player.rate == 0 { player.play() } else { player.pause() } }
+    func togglePlayback() {
+        if player.rate == 0 {
+            if let project, playhead >= project.outputDuration - 0.04 { seek(0) }
+            player.play(); isPlaying = true
+        } else { player.pause(); isPlaying = false }
+    }
     func seek(_ time: Double) { player.seek(to: CMTime(seconds: time, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) }
+
+    func seekSource(_ time: Double) {
+        guard let project else { return }
+        let source = min(max(time, 0), project.sourceDuration)
+        let removed = project.cuts.reduce(0.0) { $0 + min(max(source - $1.start, 0), $1.duration) }
+        seek(min(source - removed, max(0, project.outputDuration - 0.001)))
+    }
+
+    func loadThumbnails() async {
+        thumbnails = []
+        guard let sourceURL, let project else { return }
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: sourceURL))
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 320, height: 180)
+        defer { generator.cancelAllCGImageGeneration() }
+        var images: [NSImage] = []
+        for index in 0..<10 {
+            guard !Task.isCancelled else { return }
+            let seconds = project.sourceDuration * (Double(index) + 0.5) / 10
+            do {
+                let frame = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600)).image
+                images.append(NSImage(cgImage: frame, size: .zero))
+            } catch { return } // The player reports media failures; thumbnails are optional.
+        }
+        guard !Task.isCancelled, self.sourceURL == sourceURL else { return }
+        thumbnails = images
+    }
 
     func exportVideo(width: Int) {
         guard let project, let sourceURL, canEdit else { return }

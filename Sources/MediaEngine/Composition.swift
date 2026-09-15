@@ -1,6 +1,6 @@
 import Foundation
 @preconcurrency import AVFoundation
-import CoreImage
+@preconcurrency import CoreImage
 import ProjectCore
 
 public struct MediaInfo: Sendable {
@@ -28,7 +28,8 @@ public struct PreparedComposition {
 }
 
 public enum CompositionBuilder {
-    public static func build(project: Project, source: URL, width: Int = 1920, height: Int = 1080) async throws -> PreparedComposition {
+    // Each build transfers a fresh composition to its caller; mutable AVFoundation objects are never shared.
+    public static func build(project: Project, source: URL, width: Int = 1920, height: Int = 1080) async throws -> sending PreparedComposition {
         try project.validate()
         guard width > 0, height > 0, width <= 3840, height <= 3840 else { throw ProjectError("Unsupported render dimensions.") }
         let original = AVURLAsset(url: source)
@@ -57,7 +58,13 @@ public enum CompositionBuilder {
             output = output + sourceRange.duration
         }
         let canvas = CGRect(x: 0, y: 0, width: width, height: height)
-        let background = CIImage(color: CIColor(red: 0.065, green: 0.085, blue: 0.13)).cropped(to: canvas)
+        let colors = project.background.colors.map { CIColor(red: $0.red, green: $0.green, blue: $0.blue) }
+        guard let gradient = CIFilter(name: "CILinearGradient", parameters: [
+            "inputPoint0": CIVector(x: canvas.minX, y: canvas.maxY),
+            "inputPoint1": CIVector(x: canvas.maxX, y: canvas.minY),
+            "inputColor0": colors[0], "inputColor1": colors[1]
+        ])?.outputImage else { throw ProjectError("Cannot prepare the canvas background.") }
+        let background = gradient.cropped(to: canvas)
         let rendered = try await AVMutableVideoComposition.videoComposition(with: composition) { request in
             let input = request.sourceImage
             let extent = input.extent

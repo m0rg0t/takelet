@@ -34,6 +34,7 @@ import MediaEngine
             let info = try await MediaInspector.inspect(source)
             var project = Project(title: "A small product demo", duration: info.duration, width: info.width, height: info.height)
             project.cuts = [TimeRange(start: 2, end: 3)]
+            project.background = .dawn; project.padding = 0.09
             project.zoom.start = 0.5; project.zoom.end = 4.5; project.zoom.scale = 1.6; project.zoom.x = 0.65
             project.cursor = [CursorSample(time: 1, x: 0.3, y: 0.4, visible: true, pressed: false), CursorSample(time: 3.5, x: 0.65, y: 0.5, visible: true, pressed: true)]
             let document = root.appendingPathComponent("Sample.takelet")
@@ -77,6 +78,11 @@ import MediaEngine
                     let time = CMTime(seconds: seconds, preferredTimescale: 600)
                     let p = try await preview.image(at: time).image
                     let e = try await output.image(at: time).image
+                    if seconds == 1 {
+                        let decoded = try pixels(e)
+                        let cornerDifference = (0..<3).reduce(0) { $0 + abs(Int(decoded[$1]) - Int(decoded[decoded.count - 4 + $1])) }
+                        guard cornerDifference > 60 else { throw ProjectError("The exported gradient background is missing.") }
+                    }
                     let difference = zip(try pixels(p), try pixels(e)).map { abs(Double($0) - Double($1)) }.reduce(0, +) / Double(160 * 90 * 4)
                     guard difference < 8 else { throw ProjectError("Preview/export frame mismatch: \(difference)") }
                     frameErrors.append(difference)
@@ -90,7 +96,7 @@ import MediaEngine
                 results.append(["width": width, "height": height, "duration": rendered.duration, "fps": rate, "audioPulseTimes": beeps, "previewExportMeanPixelErrors": frameErrors, "elapsedSeconds": Date().timeIntervalSince(start)])
                 print("PASS \(width)×\(height), 30 fps, 5 s; aligned audio and preview frames.")
             }
-            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "preparationCancellation": true, "outputs": results]
+            let report: [String: Any] = ["syntheticFixture": true, "projectRoundTrip": true, "backgroundPreset": project.background.rawValue, "preparationCancellation": true, "outputs": results]
             try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("validation.json"))
         } catch { FileHandle.standardError.write(Data("Media check failed: \(error.localizedDescription)\n".utf8)); exit(1) }
     }

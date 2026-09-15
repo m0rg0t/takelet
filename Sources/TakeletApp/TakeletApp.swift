@@ -2,17 +2,27 @@ import SwiftUI
 
 @main struct TakeletApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    @AppStorage("appearance") private var appearance = "system"
+    private var colorScheme: ColorScheme? { appearance == "dark" ? .dark : appearance == "light" ? .light : nil }
     var body: some Scene {
-        WindowGroup { EditorView() }
-            .defaultSize(width: 1240, height: 800)
+        WindowGroup { EditorView().preferredColorScheme(colorScheme) }
+            .defaultSize(width: 1280, height: 820)
+            .windowToolbarStyle(.unified)
             .commands { TakeletCommands() }
         Settings {
             Form {
+                Section("Appearance") {
+                    Picker("Theme", selection: $appearance) {
+                        Text("System").tag("system")
+                        Text("Light").tag("light")
+                        Text("Dark").tag("dark")
+                    }
+                }
                 Section("Takelet Developer Preview") {
                     Text("Recordings and projects are saved on your Mac.")
                     Text("The optional Codex analyzer is currently a separate command-line tool. AI connections and narration settings will appear here in a later build.").foregroundStyle(.secondary)
                 }
-            }.formStyle(.grouped).frame(width: 460, height: 190)
+            }.formStyle(.grouped).frame(width: 460, height: 300).preferredColorScheme(colorScheme)
         }
     }
 }

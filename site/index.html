@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101411">
+  <title>Takelet — One take. A clearer story.</title>
+  <meta name="description" content="An open source macOS screen recorder and demo editor. Shape a single take with reversible cuts, smooth zoom, and local MP4 export.">
+  <link rel="canonical" href="https://m0rg0t.github.io/takelet/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Takelet — One take. A clearer story.">
+  <meta property="og:description" content="A native, open source macOS editor for focused product demos. Build the developer preview from source.">
+  <meta property="og:url" content="https://m0rg0t.github.io/takelet/">
+  <link rel="icon" type="image/svg+xml" href="./assets/mark.svg">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="#" aria-label="Takelet home"><img src="./assets/mark.svg" width="30" height="30" alt="">takelet</a>
+    <nav aria-label="Main navigation">
+      <a href="#workflow">The workflow</a>
+      <a href="#build">Get started</a>
+      <a class="github-link" href="https://github.com/m0rg0t/takelet">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <p class="eyebrow"><span class="preview-tag">Developer preview</span> Open source. Made for Mac.</p>
+      <div class="hero-copy">
+        <h1 id="hero-title">One take.<br>A <em>clearer</em> story.</h1>
+        <div class="hero-aside">
+          <p>Turn a screen recording into a focused product demo. Cut the pauses, bring details closer, and keep the whole project on your Mac.</p>
+          <div class="actions">
+            <a class="button primary" href="#build">Build for macOS <span aria-hidden="true">↗</span></a>
+            <a class="text-link" href="https://github.com/m0rg0t/takelet">Explore the source</a>
+          </div>
+          <p class="requirements">macOS 15+ <span aria-hidden="true">/</span> Apple Silicon <span aria-hidden="true">/</span> MIT</p>
+        </div>
+      </div>
+      <figure class="editor-figure">
+        <div class="figure-heading"><span>The workspace</span><span>Native Swift · Local projects</span></div>
+        <div class="editor-image"><img src="./assets/editor-dark.png" alt="Takelet in dark appearance: a product demo on a Dawn background, a filmstrip with one reversible cut, a zoom track, and style controls." width="1199" height="768" fetchpriority="high"></div>
+        <figcaption><span>A real Takelet project, using generated test footage.</span><span>Developer preview · 0.1.0</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="workflow wrap section" id="workflow" aria-labelledby="workflow-title">
+      <div class="section-heading">
+        <p class="eyebrow">A little editing goes a long way</p>
+        <h2 id="workflow-title">Keep the point.<br>Lose the waiting.</h2>
+      </div>
+      <div class="workflow-rows">
+        <article><span class="step">01</span><div><h3>Keep your original take.</h3><p>Import a recording, then remove the moments that slow it down. Restore any cut or undo a change. Your original media stays intact.</p></div><span class="feature-label">Reversible cuts</span></article>
+        <article><span class="step">02</span><div><h3>Give the important bits room.</h3><p>Set a smooth zoom and focus point. Choose a background and adjust the padding to frame your walkthrough.</p></div><span class="feature-label">Zoom & framing</span></article>
+        <article><span class="step">03</span><div><h3>Make something worth sharing.</h3><p>Preview your edits, save a portable project, and export a landscape MP4 at 1080p or 4K, 30 frames per second.</p></div><span class="feature-label">Local export</span></article>
+      </div>
+    </section>
+
+    <section class="principles section" aria-labelledby="local-title">
+      <div class="wrap principles-inner">
+        <div><p class="eyebrow">Your tools. Your take.</p><h2 id="local-title">Local first.<br>AI <em>by choice.</em></h2></div>
+        <div class="principles-copy">
+          <p class="lead">The editor works without an account or an application backend.</p>
+          <p>Recording, manual editing, saving, and export use native macOS frameworks. A portable <code>.takelet</code> project keeps its source recording together with its edits.</p>
+          <p>Want help spotting pauses? The experimental Codex command-line analyzer sends selected frames only when you run it. It uses your signed-in account’s shared Codex limits.</p>
+          <a class="text-link" href="https://github.com/m0rg0t/takelet/blob/main/docs/AI_ANALYSIS.md">Read about AI & privacy <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="status-section section wrap" aria-labelledby="status-title">
+      <div class="section-heading"><p class="eyebrow">Small beginnings, in the open</p><h2 id="status-title">An editor taking shape.</h2><p class="section-intro">Takelet is an early developer preview. Help shape what comes next.</p></div>
+      <dl class="status-list">
+        <div><dt><span class="status-label available">In the preview</span></dt><dd>Video import, portable projects, reversible cuts, a smooth zoom, canvas presets, and 1080p / 4K export.</dd></div>
+        <div><dt><span class="status-label experimental">Experimental</span></dt><dd>Window recording and optional Codex analysis. Live capture, permissions, and long-recording reliability still need broader testing.</dd></div>
+        <div><dt><span class="status-label planned">On the roadmap</span></dt><dd>Editable cursors, portrait and square layouts, script review, and ElevenLabs narration with your own API key.</dd></div>
+      </dl>
+      <a class="text-link" href="https://github.com/m0rg0t/takelet/blob/main/docs/ROADMAP.md">Follow the roadmap <span aria-hidden="true">↗</span></a>
+    </section>
+
+    <section class="build-section section wrap" id="build" aria-labelledby="build-title">
+      <div class="build-copy"><p class="eyebrow">For the makers</p><h2 id="build-title">Make your<br>first take.</h2><p>Build the developer preview with Xcode’s Swift 6 toolchain and Python 3. There are no third-party Swift package dependencies.</p><p class="build-note">Source builds only for now. A signed, notarized app download is still ahead.</p><a class="text-link" href="https://github.com/m0rg0t/takelet#build-and-run">Full build instructions <span aria-hidden="true">↗</span></a></div>
+      <div class="terminal">
+        <div class="terminal-heading"><span>Terminal</span><button id="copy-commands" type="button" hidden>Copy commands</button></div>
+        <pre tabindex="0" aria-label="Commands to build and open Takelet"><code id="build-commands">git clone https://github.com/m0rg0t/takelet.git
+cd takelet
+sh scripts/build-app.sh
+open build/Takelet.app</code></pre>
+        <div class="terminal-footer"><span>macOS 15+ · Apple Silicon</span><span id="copy-status" role="status" aria-live="polite"></span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap site-footer">
+    <a class="wordmark" href="#" aria-label="Takelet home"><img src="./assets/mark.svg" alt="" width="26" height="26">takelet</a>
+    <p>A good demo starts with one take.</p>
+    <nav aria-label="Project links"><a href="https://github.com/m0rg0t/takelet/blob/main/LICENSE">MIT license</a><a href="https://github.com/m0rg0t/takelet/blob/main/CONTRIBUTING.md">Contribute</a><a href="https://github.com/m0rg0t/takelet/issues">GitHub</a></nav>
+  </footer>
+</body>
+</html>

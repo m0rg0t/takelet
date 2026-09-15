@@ -51,7 +51,7 @@ Example.takelet/
     source.mov
 ```
 
-Schema version 1 stores a title, source dimensions/duration, cut intervals, one zoom, padding and cursor samples. Media is copied without transcoding; the fixed `.mov` filename can contain an imported MP4 container that AVFoundation detects from its contents.
+Schema version 1 stores a title, source dimensions/duration, cut intervals, one zoom, background preset, padding and cursor samples. Older documents without a background field decode as Midnight, preserving their previous appearance. Media is copied without transcoding; the fixed `.mov` filename can contain an imported MP4 container that AVFoundation detects from its contents.
 
 Metadata saves are atomic. Package creation copies media into a temporary sibling directory, then renames it into place. Loading validates schema, bounds, cuts and source paths, rejecting missing sources and symlink escapes. This is not a cryptographic integrity format; external asset edits can invalidate a project.
 

@@ -3,6 +3,23 @@ import XCTest
 @testable import ProjectCore
 
 final class ProjectTests: XCTestCase {
+    func testEarlyProjectsKeepOriginalBackground() throws {
+        let original = fixture()
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        json.removeValue(forKey: "background")
+        let decoded = try JSONDecoder().decode(Project.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(decoded, original)
+        XCTAssertEqual(decoded.background, .midnight)
+    }
+
+    func testPresentationRoundTripsAndRejectsUnknownPreset() throws {
+        var project = fixture(); project.background = .dawn; project.padding = 0.12
+        XCTAssertEqual(try JSONDecoder().decode(Project.self, from: JSONEncoder().encode(project)), project)
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(project)) as? [String: Any])
+        json["background"] = "unknown-preset"
+        XCTAssertThrowsError(try JSONDecoder().decode(Project.self, from: JSONSerialization.data(withJSONObject: json)))
+    }
+
     func fixture() -> Project {
         var project = Project(title: "Demo", duration: 10, width: 1920, height: 1080)
         project.cuts = [TimeRange(start: 1, end: 2), TimeRange(start: 4, end: 6)]

@@ -46,10 +46,31 @@ public struct Project: Codable, Equatable, Sendable {
     public var cuts: [TimeRange] = []
     public var zoom = Zoom()
     public var padding: Double = 0.06
+    public var background: CanvasBackground = .midnight
     public var cursor: [CursorSample] = []
     public init(title: String, duration: Double, width: Int, height: Int) {
         self.title = title; sourceDuration = duration; sourceWidth = width; sourceHeight = height
         zoom.end = duration
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case version, title, sourceFile, sourceDuration, sourceWidth, sourceHeight, cuts, zoom, padding, background, cursor
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decode(Int.self, forKey: .version)
+        title = try values.decode(String.self, forKey: .title)
+        sourceFile = try values.decode(String.self, forKey: .sourceFile)
+        sourceDuration = try values.decode(Double.self, forKey: .sourceDuration)
+        sourceWidth = try values.decode(Int.self, forKey: .sourceWidth)
+        sourceHeight = try values.decode(Int.self, forKey: .sourceHeight)
+        cuts = try values.decode([TimeRange].self, forKey: .cuts)
+        zoom = try values.decode(Zoom.self, forKey: .zoom)
+        padding = try values.decode(Double.self, forKey: .padding)
+        cursor = try values.decode([CursorSample].self, forKey: .cursor)
+        // Early version-1 documents predate background presets; retain their original appearance.
+        background = try values.decodeIfPresent(CanvasBackground.self, forKey: .background) ?? .midnight
     }
 
     public func validate() throws {

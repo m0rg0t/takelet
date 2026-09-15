@@ -5,7 +5,8 @@
 | Project name | **Takelet** |
 | Pronunciation | “take-let” |
 | Repository slug | `takelet` |
-| Intended GitHub repository | `m0rg0t/takelet` |
+| GitHub repository | `m0rg0t/takelet` |
+| Project site | <https://m0rg0t.github.io/takelet/> |
 | Tagline | Turn screen recordings into clear product demos. |
 | Short description | Native macOS screen recorder and demo editor with reversible cuts, smooth zoom, and optional AI assistance. |
 | License | MIT |
@@ -19,13 +20,13 @@ Suggested GitHub topics: `macos`, `swift`, `swiftui`, `screen-recorder`, `video-
 
 ## Publication status
 
-This checkout is prepared as a local Git repository. The intended identifier does not mean a public GitHub repository or release already exists.
+The source repository is public at <https://github.com/m0rg0t/takelet>. The initial developer preview was published on September 15, 2026. GitHub Pages uses the Actions workflow described in [Project site](SITE.md). A signed, notarized release is not yet available.
 
-## First public push
+## Publication checks
 
 1. Review the files and history. Keep recordings, AI evidence, account data and internal planning outside Git.
 2. Run [testing](TESTING.md) and publication checks. Keep limitations visible in the README.
-3. Confirm the destination account and public visibility at publication time. Create `m0rg0t/takelet`, set the description/topics above, and push the reviewed `main` branch.
+3. Push reviewed changes to `m0rg0t/takelet` on `main` or open a pull request.
 4. Confirm GitHub Actions completes. Enable private vulnerability reporting and appropriate branch protections.
 5. Add screenshots only from synthetic or explicitly shareable content.
 
