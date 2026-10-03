@@ -35,12 +35,12 @@ jobs:
     name: Synthetic annotation exports
     runs-on: macos-15
     timeout-minutes: 25
-    env:
-      TAKELET_BUILD_CACHE: ${{ runner.temp }}/takelet-annotations-build
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Set isolated build cache
+        run: echo "TAKELET_BUILD_CACHE=$RUNNER_TEMP/takelet-annotations-build" >> "$GITHUB_ENV"
       - name: Prepare synthetic audio dependency
         run: |
           command -v ffmpeg >/dev/null || brew install ffmpeg
