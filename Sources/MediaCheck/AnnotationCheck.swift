@@ -104,11 +104,40 @@ enum AnnotationCheck {
             throw ProjectError("Annotation composition did not produce a 3840×2160 frame.")
         }
 
+        let sourceBytes = try Data(contentsOf: portableSource)
+        let narrationBytes = try Data(contentsOf: narrationURL)
+        let exporter = VideoExporter()
+        let cancelledDestination = fixtureRoot.appendingPathComponent("cancelled.mp4")
+        let cancellation = Task { @MainActor in
+            try await exporter.export(project: portable, source: portableSource, destination: cancelledDestination, width: 3840, height: 2160, assets: portableAssets)
+        }
+        while !exporter.isExporting { await Task.yield() }
+        exporter.cancel()
+        do {
+            try await cancellation.value
+            throw ProjectError("Cancelled annotation export unexpectedly completed.")
+        } catch is CancellationError {}
+        guard !FileManager.default.fileExists(atPath: cancelledDestination.path), !exporter.isExporting else {
+            throw ProjectError("Cancelled annotation export left output or active state.")
+        }
+
+        let existingDestination = fixtureRoot.appendingPathComponent("existing.mp4")
+        let sentinel = Data("Existing output must be preserved".utf8)
+        try sentinel.write(to: existingDestination)
+        var rejectedExisting = false
+        do {
+            try await exporter.export(project: portable, source: portableSource, destination: existingDestination, width: 1920, height: 1080, assets: portableAssets)
+        } catch { rejectedExisting = true }
+        guard rejectedExisting, !exporter.isExporting,
+              try Data(contentsOf: existingDestination) == sentinel else {
+            throw ProjectError("Existing annotation destination was not preserved.")
+        }
+
         var exportReports: [[String: Any]] = []
         var previewExportDifferences: [Double] = []
         for (width, height, previewFrame) in [(1920, 1080, activeFrame), (3840, 2160, fourKFrame)] {
             let destination = fixtureRoot.appendingPathComponent("annotations-\(width).mp4")
-            try await VideoExporter().export(project: portable, source: portableSource, destination: destination, width: width, height: height, assets: portableAssets)
+            try await exporter.export(project: portable, source: portableSource, destination: destination, width: width, height: height, assets: portableAssets)
             let outputInfo = try await MediaInspector.inspect(destination)
             let exportedFrame = try await frame(from: AVURLAsset(url: destination), at: activeOutput)
             let previewExportDifference = try pixelDifference(previewFrame, exportedFrame, sampleWidth: 480, sampleHeight: 270).mean
@@ -126,12 +155,26 @@ enum AnnotationCheck {
             ])
         }
 
+        guard !exporter.isExporting,
+              try Data(contentsOf: portableSource) == sourceBytes,
+              try Data(contentsOf: narrationURL) == narrationBytes,
+              try FileManager.default.contentsOfDirectory(atPath: fixtureRoot.path)
+                .allSatisfy({ !$0.hasPrefix(".takelet-export-") }) else {
+            throw ProjectError("Annotation exports changed input assets or left temporary/active state.")
+        }
+
+        print("PASS annotation cancellation, existing destination preservation, exporter reuse, unchanged assets, and temporary cleanup.")
         print(String(format: "DETAIL annotations direct half-open %.6f blur %.6f/%.6f cover %.6f text %d px", direct.halfOpenDifference, direct.blurInsideDifference, direct.blurOutsideDifference, direct.coverDifference, direct.whiteTextPixels))
         print(String(format: "DETAIL annotations timing before %.6f active %.6f hold %.6f after %.6f preview/export %.6f/%.6f", beforeDifference.mean, activeDifference.mean, holdDifference.mean, afterDifference.mean, previewExportDifferences[0], previewExportDifferences[1]))
         print("PASS annotations portable project, half-open timing, mask layering, blur ROI, cuts, zoom, hold, and 1080p/4K exports.")
 
         return [
             "portableProject": true,
+            "preparationCancellation": true,
+            "existingDestinationPreserved": true,
+            "exporterReuse": true,
+            "sourceAssetsUnchanged": true,
+            "temporaryOutputsCleaned": true,
             "document": document.lastPathComponent,
             "halfOpenDifference": direct.halfOpenDifference,
             "blurInsideDifference": direct.blurInsideDifference,
@@ -483,3 +526,4 @@ private extension AnnotationCheck {
         return value
     }
 }
+

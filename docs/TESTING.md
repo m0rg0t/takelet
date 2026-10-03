@@ -14,7 +14,9 @@ contracts, AI results, and fragmented/interleaved JSONL transport, timeouts and 
 Tests require Python 3 but no provider login, inference or screen access. A generated
 MP3 test fixture exercises audio measurement and installation without a paid request.
 
-GitHub Actions builds/tests on macOS, packages the developer app, and checks tracked files for local artifacts and obvious credentials. A local pass does not mean the remote workflow has run.
+GitHub Actions builds/tests on macOS, packages the developer app, and checks tracked files for local artifacts and obvious credentials. A separate macOS 15 job runs `takelet-media-check --annotations` in a fresh temporary directory and retains synthetic diagnostics for seven days, including failures. It verifies 1080p/4K exports, mask/blur alignment, annotation timing across cuts and holds, cancellation during preparation, reuse after cancellation/rejected output, existing-file preservation, unchanged source assets and temporary-file cleanup. A second invocation must reject the existing output directory without changing its report. A local pass does not mean the remote workflow has run.
+
+Both the full and annotation-only media checks require `ffmpeg` for synthetic MP3 narration. CI uses the runner's FFmpeg or installs the official Homebrew formula; the app has no external Swift package dependencies. These checks never request screen capture, provider credentials or model calls. The 4K export upscales generated 1080p footage and does not validate native 4K capture or physical-device behavior.
 
 ## Native media check
 
@@ -163,3 +165,4 @@ git diff --cached --check
 ```
 
 The script reads the Git index. Stage intended files first and inspect the diff yourself; a pattern check cannot guarantee that content is safe to share. Do not include private recordings/frames, account state or credentials.
+
